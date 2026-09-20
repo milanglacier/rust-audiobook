@@ -1,0 +1,444 @@
+{
+ "id": "11-smart-pointers",
+ "title": "第十一章 智能指针：超越引用",
+ "audio": "11-smart-pointers.mp3",
+ "duration": 597.281,
+ "language": "zh",
+ "provider": "minimax",
+ "voice": "Chinese (Mandarin)_Warm_Bestie",
+ "source_hash": "6e53dc8f02a63016b3018ad49165b5e357ba2e7bdd7d698e81cf71205e9a2c8a",
+ "generated_at": "2026-09-20T04:50:08+00:00",
+ "segments": [
+  {
+   "i": 0,
+   "kind": "heading",
+   "html": "<h1>第十一章 智能指针：超越引用</h1>",
+   "level": 1,
+   "start": 0.0,
+   "end": 3.065,
+   "spoken": "第十一章 智能指针：超越引用"
+  },
+  {
+   "i": 1,
+   "kind": "para",
+   "html": "<p>到目前为止，我们一直在用两种方式持有数据：要么直接拥有一个值，要么通过引用借来看看。大多数时候这就够了。但有些时候你会遇到普通引用解决不了的问题。比如你想在堆上分配一个值，或者你希望一份数据同时有两个 owner，又或者你想在只有不可变引用的情况下修改数据。这些场景，就是智能指针存在的理由。</p>",
+   "start": 3.965,
+   "end": 30.877,
+   "spoken": "到目前为止，我们一直在用两种方式持有数据：要么直接拥有一个值，要么通过引用借来看看。大多数时候这就够了。但有些时候你会遇到普通引用解决不了的问题。比如你想在堆上分配一个值，或者你希望一份数据同时有两个 owner，又或者你想在只有不可变引用的情况下修改数据。这些场景，就是智能指针存在的理由。"
+  },
+  {
+   "i": 2,
+   "kind": "para",
+   "html": "<p>这一章讲四件事：第一，Box 怎么把值放到堆上。第二，Rc 和 Arc 怎么让一个值有多个 owner。第三，RefCell 怎么把借用检查推迟到运行时。第四，智能指针背后的两个 trait，Deref 和 Drop。</p>",
+   "start": 31.427,
+   "end": 48.919,
+   "spoken": "这一章讲四件事：第一，Box 怎么把值放到堆上。第二，Rc 和 Arc 怎么让一个值有多个 owner。第三，RefCell 怎么把借用检查推迟到运行时。第四，智能指针背后的两个 trait，Deref 和 Drop。"
+  },
+  {
+   "i": 3,
+   "kind": "heading",
+   "html": "<h2>Box：最简单的智能指针</h2>",
+   "level": 2,
+   "start": 49.469,
+   "end": 52.197,
+   "spoken": "Box：最简单的智能指针"
+  },
+  {
+   "i": 4,
+   "kind": "para",
+   "html": "<p>我们从最简单的开始。Box 做的事情很纯粹：在堆上分配一块内存，把值放进去，然后给你一个指向堆上数据的指针。Box 本身在栈上，它拥有堆上那个值的所有权。当 Box 离开作用域时，堆上的值也跟着被释放。</p>",
+   "start": 53.097,
+   "end": 72.405,
+   "spoken": "我们从最简单的开始。Box 做的事情很纯粹：在堆上分配一块内存，把值放进去，然后给你一个指向堆上数据的指针。Box 本身在栈上，它拥有堆上那个值的所有权。当 Box 离开作用域时，堆上的值也跟着被释放。"
+  },
+  {
+   "i": 5,
+   "kind": "para",
+   "html": "<p>什么时候需要 Box？最常见的场景是递归类型。假设你要定义一个链表。链表的每个节点包含一个值和指向下一个节点的指针。你很自然地写出这样的 enum。</p>",
+   "start": 72.955,
+   "end": 85.064,
+   "spoken": "什么时候需要 Box？最常见的场景是递归类型。假设你要定义一个链表。链表的每个节点包含一个值和指向下一个节点的指针。你很自然地写出这样的 enum。"
+  },
+  {
+   "i": 6,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">// 编译不过\nenum List {\n    Cons(i32, List),\n    Nil,\n}\n</code></pre>",
+   "start": 85.064,
+   "end": 85.064
+  },
+  {
+   "i": 7,
+   "kind": "para",
+   "html": "<p>编译器会拒绝，说 recursive type has infinite size。原因是编译器需要在编译期知道每个类型占多少字节。List 里面包含 List，List 里面又包含 List，无穷无尽，编译器算不出大小。</p>",
+   "start": 85.614,
+   "end": 101.74,
+   "spoken": "编译器会拒绝，说 recursive type has infinite size。原因是编译器需要在编译期知道每个类型占多少字节。List 里面包含 List，List 里面又包含 List，无穷无尽，编译器算不出大小。"
+  },
+  {
+   "i": 8,
+   "kind": "para",
+   "html": "<p>解决方法是用 Box 加一层间接。Box 本身的大小是固定的，就是一个指针的大小。编译器不需要知道堆上的数据有多大，只需要知道指针有多大。</p>",
+   "start": 102.29,
+   "end": 114.016,
+   "spoken": "解决方法是用 Box 加一层间接。Box 本身的大小是固定的，就是一个指针的大小。编译器不需要知道堆上的数据有多大，只需要知道指针有多大。"
+  },
+  {
+   "i": 9,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">enum List {\n    Cons(i32, Box&lt;List&gt;),\n    Nil,\n}\n\nlet list = List::Cons(1,\n    Box::new(List::Cons(2,\n        Box::new(List::Cons(3,\n            Box::new(List::Nil))))));\n</code></pre>",
+   "start": 114.016,
+   "end": 114.016
+  },
+  {
+   "i": 10,
+   "kind": "para",
+   "html": "<p>Box 还有一个常见的用途：创建 trait object。当你想让一个集合里存放不同类型的值，只要求它们都实现了某个 trait，就可以用 <code>Box&lt;dyn Trait&gt;</code>。这一点我们在 trait 那一章提到过，这里不展开了。</p>",
+   "start": 114.566,
+   "end": 130.727,
+   "spoken": "Box 还有一个常见的用途：创建 trait object。当你想让一个集合里存放不同类型的值，只要求它们都实现了某个 trait，就可以用 Box dyn Trait。这一点我们在 trait 那一章提到过，这里不展开了。"
+  },
+  {
+   "i": 11,
+   "kind": "para",
+   "html": "<p>所以记住：Box 是最简单的智能指针，它的唯一作用就是在堆上分配内存。当你需要固定大小的间接访问时，用 Box。</p>",
+   "start": 131.277,
+   "end": 141.215,
+   "spoken": "所以记住：Box 是最简单的智能指针，它的唯一作用就是在堆上分配内存。当你需要固定大小的间接访问时，用 Box。"
+  },
+  {
+   "i": 12,
+   "kind": "heading",
+   "html": "<h2>Rc：单线程的多所有者</h2>",
+   "level": 2,
+   "start": 141.765,
+   "end": 144.238,
+   "spoken": "Rc：单线程的多所有者"
+  },
+  {
+   "i": 13,
+   "kind": "para",
+   "html": "<p>所有权的规则是每个值只有一个 owner。但有时候，一个值确实需要被多个部分共享。比如一个图数据结构里，多个边可能指向同一个节点。你不想为每条边复制一份节点数据，也不想用引用来搞一堆生命周期标注。</p>",
+   "start": 145.138,
+   "end": 162.623,
+   "spoken": "所有权的规则是每个值只有一个 owner。但有时候，一个值确实需要被多个部分共享。比如一个图数据结构里，多个边可能指向同一个节点。你不想为每条边复制一份节点数据，也不想用引用来搞一堆生命周期标注。"
+  },
+  {
+   "i": 14,
+   "kind": "para",
+   "html": "<p>Rc 就是为这种场景设计的。Rc 是 reference counting 的缩写，意思是引用计数。每次你 clone 一个 Rc，引用计数加一。每次一个 Rc 离开作用域，引用计数减一。当计数变成零的时候，值被释放。</p>",
+   "start": 163.173,
+   "end": 178.568,
+   "spoken": "Rc 就是为这种场景设计的。Rc 是 reference counting 的缩写，意思是引用计数。每次你 clone 一个 Rc，引用计数加一。每次一个 Rc 离开作用域，引用计数减一。当计数变成零的时候，值被释放。"
+  },
+  {
+   "i": 15,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::rc::Rc;\n\nlet a = Rc::new(String::from(&quot;hello&quot;));\nlet b = Rc::clone(&amp;a);\nlet c = Rc::clone(&amp;a);\nprintln!(&quot;count: {}&quot;, Rc::strong_count(&amp;a)); // 3\n</code></pre>",
+   "start": 178.568,
+   "end": 178.568
+  },
+  {
+   "i": 16,
+   "kind": "para",
+   "html": "<p>注意这里我们用的是 <code>Rc::clone</code> 而不是普通的 clone。虽然写法上你也可以用 a.clone()，但社区习惯用 Rc clone 来强调这里只是增加引用计数，不是深拷贝。Rc clone 的开销非常小，就是给计数器加一。</p>",
+   "start": 179.118,
+   "end": 195.709,
+   "spoken": "注意这里我们用的是 Rc clone 而不是普通的 clone。虽然写法上你也可以用 a.clone()，但社区习惯用 Rc clone 来强调这里只是增加引用计数，不是深拷贝。Rc clone 的开销非常小，就是给计数器加一。"
+  },
+  {
+   "i": 17,
+   "kind": "para",
+   "html": "<p>Rc 有一个重要的限制：它只能用于单线程。如果你试图把 Rc 发送到另一个线程，编译器会拒绝。原因是 Rc 的引用计数不是原子操作，在多线程环境下会出现数据竞争。</p>",
+   "start": 196.259,
+   "end": 210.632,
+   "spoken": "Rc 有一个重要的限制：它只能用于单线程。如果你试图把 Rc 发送到另一个线程，编译器会拒绝。原因是 Rc 的引用计数不是原子操作，在多线程环境下会出现数据竞争。"
+  },
+  {
+   "i": 18,
+   "kind": "para",
+   "html": "<p>如果需要跨线程共享数据，用 Arc。Arc 是 atomic reference counting 的缩写，它的引用计数用原子操作来更新，所以是线程安全的。我们在并发那一章已经见过 Arc 和 Mutex 配合使用的例子。</p>",
+   "start": 211.182,
+   "end": 227.598,
+   "spoken": "如果需要跨线程共享数据，用 Arc。Arc 是 atomic reference counting 的缩写，它的引用计数用原子操作来更新，所以是线程安全的。我们在并发那一章已经见过 Arc 和 Mutex 配合使用的例子。"
+  },
+  {
+   "i": 19,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::sync::Arc;\nuse std::thread;\n\nlet data = Arc::new(vec![1, 2, 3]);\nlet data_clone = Arc::clone(&amp;data);\n\nthread::spawn(move || {\n    println!(&quot;{:?}&quot;, data_clone);\n});\n</code></pre>",
+   "start": 227.598,
+   "end": 227.598
+  },
+  {
+   "i": 20,
+   "kind": "para",
+   "html": "<p>还有一点：Rc 和 Arc 只提供不可变访问。你不能通过 Rc 修改里面的值。如果你需要多个 owner 同时还能修改数据，就需要下一节讲的 RefCell。</p>",
+   "start": 228.148,
+   "end": 240.002,
+   "spoken": "还有一点：Rc 和 Arc 只提供不可变访问。你不能通过 Rc 修改里面的值。如果你需要多个 owner 同时还能修改数据，就需要下一节讲的 RefCell。"
+  },
+  {
+   "i": 21,
+   "kind": "para",
+   "html": "<p>所以记住：Rc 让单线程里的多个部分共享同一个值，Arc 是它的线程安全版本。两者都通过引用计数来管理所有权，都只提供不可变访问。</p>",
+   "start": 240.552,
+   "end": 252.406,
+   "spoken": "所以记住：Rc 让单线程里的多个部分共享同一个值，Arc 是它的线程安全版本。两者都通过引用计数来管理所有权，都只提供不可变访问。"
+  },
+  {
+   "i": 22,
+   "kind": "heading",
+   "html": "<h2>RefCell 和内部可变性</h2>",
+   "level": 2,
+   "start": 252.956,
+   "end": 254.999,
+   "spoken": "RefCell 和内部可变性"
+  },
+  {
+   "i": 23,
+   "kind": "para",
+   "html": "<p>正常情况下，Rust 的借用规则在编译期执行。你要么有多个不可变引用，要么有一个可变引用。但有时候你确实需要在只有不可变引用的情况下修改数据。RefCell 就是做这件事的。</p>",
+   "start": 255.899,
+   "end": 270.865,
+   "spoken": "正常情况下，Rust 的借用规则在编译期执行。你要么有多个不可变引用，要么有一个可变引用。但有时候你确实需要在只有不可变引用的情况下修改数据。RefCell 就是做这件事的。"
+  },
+  {
+   "i": 24,
+   "kind": "para",
+   "html": "<p>RefCell 把借用检查从编译期推迟到运行时。你可以在 RefCell 上调用 borrow 拿到一个不可变引用，或者调用 borrow_mut 拿到一个可变引用。借用规则还是那些规则——同一时刻不能同时有可变和不可变引用——但违反规则的后果从编译错误变成了运行时 panic。</p>",
+   "start": 271.415,
+   "end": 293.416,
+   "spoken": "RefCell 把借用检查从编译期推迟到运行时。你可以在 RefCell 上调用 borrow 拿到一个不可变引用，或者调用 borrow_mut 拿到一个可变引用。借用规则还是那些规则——同一时刻不能同时有可变和不可变引用——但违反规则的后果从编译错误变成了运行时 panic。"
+  },
+  {
+   "i": 25,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::cell::RefCell;\n\nlet data = RefCell::new(5);\n\n{\n    let mut v = data.borrow_mut();\n    *v += 1;\n}\n\nprintln!(&quot;{}&quot;, data.borrow()); // 6\n</code></pre>",
+   "start": 293.416,
+   "end": 293.416
+  },
+  {
+   "i": 26,
+   "kind": "para",
+   "html": "<p>注意 borrow_mut 拿到的是一个特殊的智能指针类型，叫 RefMut。当 RefMut 离开作用域时，借用自动释放。这就是为什么我们用了一个大括号把可变借用包起来——确保可变引用在不可变引用 borrow 之前被释放。</p>",
+   "start": 293.966,
+   "end": 311.98,
+   "spoken": "注意 borrow_mut 拿到的是一个特殊的智能指针类型，叫 RefMut。当 RefMut 离开作用域时，借用自动释放。这就是为什么我们用了一个大括号把可变借用包起来——确保可变引用在不可变引用 borrow 之前被释放。"
+  },
+  {
+   "i": 27,
+   "kind": "para",
+   "html": "<p>如果你违反了规则，比如同时持有两个可变引用，程序不会编译失败，而是在运行时 panic。这比编译期检查更危险，所以 RefCell 应该谨慎使用。</p>",
+   "start": 312.53,
+   "end": 325.835,
+   "spoken": "如果你违反了规则，比如同时持有两个可变引用，程序不会编译失败，而是在运行时 panic。这比编译期检查更危险，所以 RefCell 应该谨慎使用。"
+  },
+  {
+   "i": 28,
+   "kind": "para",
+   "html": "<p>RefCell 最常见的用法是和 Rc 配合。Rc 给你多个 owner，但只有不可变访问。RefCell 给你内部可变性。两者结合，<code>Rc&lt;RefCell&lt;T&gt;&gt;</code> 就让多个 owner 都能修改同一个值。</p>",
+   "start": 326.385,
+   "end": 340.63,
+   "spoken": "RefCell 最常见的用法是和 Rc 配合。Rc 给你多个 owner，但只有不可变访问。RefCell 给你内部可变性。两者结合，Rc RefCell T 就让多个 owner 都能修改同一个值。"
+  },
+  {
+   "i": 29,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::cell::RefCell;\nuse std::rc::Rc;\n\nlet shared = Rc::new(RefCell::new(vec![1, 2, 3]));\n\nlet a = Rc::clone(&amp;shared);\nlet b = Rc::clone(&amp;shared);\n\na.borrow_mut().push(4);\nb.borrow_mut().push(5);\n\nprintln!(&quot;{:?}&quot;, shared.borrow()); // [1, 2, 3, 4, 5]\n</code></pre>",
+   "start": 340.63,
+   "end": 340.63
+  },
+  {
+   "i": 30,
+   "kind": "para",
+   "html": "<p>a 和 b 都是 shared 的 clone，它们共享同一份 Vec。通过 borrow_mut，它们都能修改这个 Vec。这在编译期的所有权系统里是不可能的，但 RefCell 让它在运行时成为可能，代价是你要自己保证不会同时持有两个可变引用。</p>",
+   "start": 341.18,
+   "end": 359.977,
+   "spoken": "a 和 b 都是 shared 的 clone，它们共享同一份 Vec。通过 borrow_mut，它们都能修改这个 Vec。这在编译期的所有权系统里是不可能的，但 RefCell 让它在运行时成为可能，代价是你要自己保证不会同时持有两个可变引用。"
+  },
+  {
+   "i": 31,
+   "kind": "para",
+   "html": "<p>所以记住：RefCell 把借用检查推迟到运行时。它通常和 Rc 配合使用，提供&quot;多 owner 加可变访问&quot;的能力。但运行时 panic 的风险意味着你应该只在真正需要的时候用它。</p>",
+   "start": 360.527,
+   "end": 374.563,
+   "spoken": "所以记住：RefCell 把借用检查推迟到运行时。它通常和 Rc 配合使用，提供\"多 owner 加可变访问\"的能力。但运行时 panic 的风险意味着你应该只在真正需要的时候用它。"
+  },
+  {
+   "i": 32,
+   "kind": "heading",
+   "html": "<h2>Deref 和 Drop：智能指针的幕后机制</h2>",
+   "level": 2,
+   "start": 375.113,
+   "end": 378.353,
+   "spoken": "Deref 和 Drop：智能指针的幕后机制"
+  },
+  {
+   "i": 33,
+   "kind": "para",
+   "html": "<p>到这里你可能会问：Box、Rc、RefCell 为什么叫&quot;智能&quot;指针？它们和普通引用有什么本质区别？答案在两个 trait 里：Deref 和 Drop。</p>",
+   "start": 379.253,
+   "end": 390.421,
+   "spoken": "到这里你可能会问：Box、Rc、RefCell 为什么叫\"智能\"指针？它们和普通引用有什么本质区别？答案在两个 trait 里：Deref 和 Drop。"
+  },
+  {
+   "i": 34,
+   "kind": "para",
+   "html": "<p>Deref trait 让一个类型表现得像引用一样。当你在 Box 上调用方法时，Rust 会自动&quot;解引用&quot;到里面的值。这就是为什么 Box 用起来几乎和直接持有值一模一样。</p>",
+   "start": 390.971,
+   "end": 403.812,
+   "spoken": "Deref trait 让一个类型表现得像引用一样。当你在 Box 上调用方法时，Rust 会自动\"解引用\"到里面的值。这就是为什么 Box 用起来几乎和直接持有值一模一样。"
+  },
+  {
+   "i": 35,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let boxed = Box::new(String::from(&quot;hello&quot;));\nprintln!(&quot;{}&quot;, boxed.len()); // 直接调用 String 的方法\n</code></pre>",
+   "start": 403.812,
+   "end": 403.812
+  },
+  {
+   "i": 36,
+   "kind": "para",
+   "html": "<p>你没有写 <code>(*boxed).len()</code>，Rust 自动帮你做了。这个自动行为叫做 deref coercion。编译器看到你在 Box String 上调用 len，就自动把 Box 解引用成 String，再把 String 解引用成 str，找到 len 方法。这个链条可以走很多层，全部在编译期完成，零运行时开销。</p>",
+   "start": 404.362,
+   "end": 426.154,
+   "spoken": "你没有写 解引用 boxed 点 len，Rust 自动帮你做了。这个自动行为叫做 deref coercion。编译器看到你在 Box String 上调用 len，就自动把 Box 解引用成 String，再把 String 解引用成 str，找到 len 方法。这个链条可以走很多层，全部在编译期完成，零运行时开销。"
+  },
+  {
+   "i": 37,
+   "kind": "para",
+   "html": "<p>Drop trait 让你自定义值被释放时的行为。当一个值离开作用域时，Rust 自动调用它的 drop 方法。对于 Box，drop 释放堆上的内存。对于 Rc，drop 把引用计数减一，如果减到零就释放。对于 Mutex 的锁，drop 自动解锁。</p>",
+   "start": 426.704,
+   "end": 446.313,
+   "spoken": "Drop trait 让你自定义值被释放时的行为。当一个值离开作用域时，Rust 自动调用它的 drop 方法。对于 Box，drop 释放堆上的内存。对于 Rc，drop 把引用计数减一，如果减到零就释放。对于 Mutex 的锁，drop 自动解锁。"
+  },
+  {
+   "i": 38,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">struct CustomPointer {\n    data: String,\n}\n\nimpl Drop for CustomPointer {\n    fn drop(&amp;mut self) {\n        println!(&quot;dropping: {}&quot;, self.data);\n    }\n}\n\nfn main() {\n    let a = CustomPointer { data: String::from(&quot;first&quot;) };\n    let b = CustomPointer { data: String::from(&quot;second&quot;) };\n    println!(&quot;created&quot;);\n    // 离开作用域时，b 先被 drop，然后 a\n}\n</code></pre>",
+   "start": 446.313,
+   "end": 446.313
+  },
+  {
+   "i": 39,
+   "kind": "para",
+   "html": "<p>这就是 Rust 的 RAII 模式，英文全称是 Resource Acquisition Is Initialization。资源在创建时获取，在离开作用域时自动释放。文件句柄关闭、网络连接断开、内存释放——全部通过 Drop trait 自动完成，你不需要手动写清理代码。</p>",
+   "start": 446.863,
+   "end": 467.076,
+   "spoken": "这就是 Rust 的 R A I I 模式，英文全称是 Resource Acquisition Is Initialization。资源在创建时获取，在离开作用域时自动释放。文件句柄关闭、网络连接断开、内存释放——全部通过 Drop trait 自动完成，你不需要手动写清理代码。"
+  },
+  {
+   "i": 40,
+   "kind": "para",
+   "html": "<p>所以记住：Deref 让智能指针用起来像普通引用，Drop 让资源在离开作用域时自动释放。这两个 trait 是所有智能指针的基础，也是 Rust 零成本抽象的典型代表。</p>",
+   "start": 467.626,
+   "end": 482.174,
+   "spoken": "所以记住：Deref 让智能指针用起来像普通引用，Drop 让资源在离开作用域时自动释放。这两个 trait 是所有智能指针的基础，也是 Rust 零成本抽象的典型代表。"
+  },
+  {
+   "i": 41,
+   "kind": "heading",
+   "html": "<h2>选择哪种指针</h2>",
+   "level": 2,
+   "start": 482.724,
+   "end": 484.593,
+   "spoken": "选择哪种指针"
+  },
+  {
+   "i": 42,
+   "kind": "para",
+   "html": "<p>最后我们来做一个简单的总结，帮你在实际编码中做选择。</p>",
+   "start": 485.493,
+   "end": 490.218,
+   "spoken": "最后我们来做一个简单的总结，帮你在实际编码中做选择。"
+  },
+  {
+   "i": 43,
+   "kind": "para",
+   "html": "<p>如果你只需要把值放到堆上，或者需要一个固定大小的间接层，用 Box。大多数情况下 Box 就够了。</p>",
+   "start": 490.768,
+   "end": 498.872,
+   "spoken": "如果你只需要把值放到堆上，或者需要一个固定大小的间接层，用 Box。大多数情况下 Box 就够了。"
+  },
+  {
+   "i": 44,
+   "kind": "para",
+   "html": "<p>如果你需要在单线程里让多个部分共享同一个值，用 Rc。如果是多线程，用 Arc。</p>",
+   "start": 499.422,
+   "end": 506.585,
+   "spoken": "如果你需要在单线程里让多个部分共享同一个值，用 Rc。如果是多线程，用 Arc。"
+  },
+  {
+   "i": 45,
+   "kind": "para",
+   "html": "<p>如果你需要在不可变的上下文里修改数据，用 RefCell。通常和 Rc 配合使用。</p>",
+   "start": 507.135,
+   "end": 514.252,
+   "spoken": "如果你需要在不可变的上下文里修改数据，用 RefCell。通常和 Rc 配合使用。"
+  },
+  {
+   "i": 46,
+   "kind": "para",
+   "html": "<p>如果你不确定该用哪个，先试试最简单的方案——直接持有值，用 clone 复制。clone 的开销在大多数场景下远小于你花在思考指针选择上的时间。只有当 clone 的开销真的成为瓶颈，或者 clone 在语义上不正确的时候，才考虑智能指针。</p>",
+   "start": 514.802,
+   "end": 533.994,
+   "spoken": "如果你不确定该用哪个，先试试最简单的方案——直接持有值，用 clone 复制。clone 的开销在大多数场景下远小于你花在思考指针选择上的时间。只有当 clone 的开销真的成为瓶颈，或者 clone 在语义上不正确的时候，才考虑智能指针。"
+  },
+  {
+   "i": 47,
+   "kind": "heading",
+   "html": "<h2>回顾</h2>",
+   "level": 2,
+   "start": 534.544,
+   "end": 535.31,
+   "spoken": "回顾"
+  },
+  {
+   "i": 48,
+   "kind": "para",
+   "html": "<p>我们来总结这一章。</p>",
+   "start": 536.21,
+   "end": 537.777,
+   "spoken": "我们来总结这一章。"
+  },
+  {
+   "i": 49,
+   "kind": "para",
+   "html": "<p>第一，Box 把值放到堆上，大小固定，是最简单的智能指针。递归类型和 trait object 是它最常见的用途。</p>",
+   "start": 538.327,
+   "end": 547.708,
+   "spoken": "第一，Box 把值放到堆上，大小固定，是最简单的智能指针。递归类型和 trait object 是它最常见的用途。"
+  },
+  {
+   "i": 50,
+   "kind": "para",
+   "html": "<p>第二，Rc 和 Arc 通过引用计数实现多所有者。Rc 用于单线程，Arc 用于多线程。两者都只提供不可变访问。</p>",
+   "start": 548.258,
+   "end": 558.324,
+   "spoken": "第二，Rc 和 Arc 通过引用计数实现多所有者。Rc 用于单线程，Arc 用于多线程。两者都只提供不可变访问。"
+  },
+  {
+   "i": 51,
+   "kind": "para",
+   "html": "<p>第三，RefCell 把借用检查推迟到运行时，提供内部可变性。Rc 加 RefCell 的组合让多个 owner 都能修改数据，但违反规则会在运行时 panic。</p>",
+   "start": 558.874,
+   "end": 571.668,
+   "spoken": "第三，RefCell 把借用检查推迟到运行时，提供内部可变性。Rc 加 RefCell 的组合让多个 owner 都能修改数据，但违反规则会在运行时 panic。"
+  },
+  {
+   "i": 52,
+   "kind": "para",
+   "html": "<p>第四，Deref 和 Drop 是智能指针背后的机制。Deref 让智能指针像引用一样使用，Drop 让资源自动释放。</p>",
+   "start": 572.218,
+   "end": 581.297,
+   "spoken": "第四，Deref 和 Drop 是智能指针背后的机制。Deref 让智能指针像引用一样使用，Drop 让资源自动释放。"
+  },
+  {
+   "i": 53,
+   "kind": "para",
+   "html": "<p>下一章是这本书的最后一章。我们会把目光从语言本身移开，看看 Rust 的工具链和生态——Cargo 怎么管理项目，社区有哪些值得了解的 crate，以及从这本书出发你应该往哪里走。</p>",
+   "start": 581.847,
+   "end": 596.731,
+   "spoken": "下一章是这本书的最后一章。我们会把目光从语言本身移开，看看 Rust 的工具链和生态——Cargo 怎么管理项目，社区有哪些值得了解的 crate，以及从这本书出发你应该往哪里走。"
+  }
+ ]
+}

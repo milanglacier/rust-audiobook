@@ -34,6 +34,10 @@ nix-shell -p ffmpeg --run "uv run --project .claude/skills/make-audiobook audiob
 uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/site --host 0.0.0.0 --port 8000
 ```
 
+## Audiobook workflow
+
+- **Always checkpoint after writing chapters.** After drafting new or revised chapter transcripts, run `audiobook-stats`, share the results with the user, and **wait for explicit approval** before proceeding to audio synthesis (`audiobook-synth`). Synthesis costs money and cannot be undone — never skip the review step.
+
 ## Version control
 
 - `.env` is gitignored (contains API keys).

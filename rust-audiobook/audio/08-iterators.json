@@ -1,0 +1,536 @@
+{
+ "id": "08-iterators",
+ "title": "第八章 迭代器与集合：数据的流水线",
+ "audio": "08-iterators.mp3",
+ "duration": 489.334,
+ "language": "zh",
+ "provider": "minimax",
+ "voice": "Chinese (Mandarin)_Warm_Bestie",
+ "source_hash": "6e215fce5a027095701029c3cd0c32bd8aa8fe0e7d0e9e40d9d93cd40086637d",
+ "generated_at": "2026-09-20T04:47:09+00:00",
+ "segments": [
+  {
+   "i": 0,
+   "kind": "heading",
+   "html": "<h1>第八章 迭代器与集合：数据的流水线</h1>",
+   "level": 1,
+   "start": 0.0,
+   "end": 4.214,
+   "spoken": "第八章 迭代器与集合：数据的流水线"
+  },
+  {
+   "i": 1,
+   "kind": "para",
+   "html": "<p>假设你有一个文本文件，里面是一串数字，每行一个。你想读进来，过滤掉负数，把剩下的每个数乘以二，然后收集到一个 Vec 里。在很多语言里，你会写一个 for 循环，声明一个空列表，逐个判断，逐个追加。在 Rust 里，你可以用一条迭代器链把这件事写成一行。而且编译器会把这条链优化到和手写循环一样快——这就是零成本抽象。</p>",
+   "start": 5.114,
+   "end": 32.626,
+   "spoken": "假设你有一个文本文件，里面是一串数字，每行一个。你想读进来，过滤掉负数，把剩下的每个数乘以二，然后收集到一个 Vec 里。在很多语言里，你会写一个 for 循环，声明一个空列表，逐个判断，逐个追加。在 Rust 里，你可以用一条迭代器链把这件事写成一行。而且编译器会把这条链优化到和手写循环一样快——这就是零成本抽象。"
+  },
+  {
+   "i": 2,
+   "kind": "para",
+   "html": "<p>这一章讲四件事：Iterator trait 的核心是什么，惰性求值意味着什么，常用的迭代器适配器有哪些，以及 Vec 和 HashMap 这两个最重要的集合怎么和所有权互动。</p>",
+   "start": 33.176,
+   "end": 45.923,
+   "spoken": "这一章讲四件事：Iterator trait 的核心是什么，惰性求值意味着什么，常用的迭代器适配器有哪些，以及 Vec 和 HashMap 这两个最重要的集合怎么和所有权互动。"
+  },
+  {
+   "i": 3,
+   "kind": "heading",
+   "html": "<h2>Iterator trait：只需要一个 next</h2>",
+   "level": 2,
+   "start": 46.473,
+   "end": 49.492,
+   "spoken": "Iterator trait：只需要一个 next"
+  },
+  {
+   "i": 4,
+   "kind": "para",
+   "html": "<p>上一章我们讲了 trait。迭代器就是一个 trait，定义在标准库里，叫 Iterator。这个 trait 只要求你实现一个方法：next。</p>",
+   "start": 50.392,
+   "end": 60.156,
+   "spoken": "上一章我们讲了 trait。迭代器就是一个 trait，定义在标准库里，叫 Iterator。这个 trait 只要求你实现一个方法：next。"
+  },
+  {
+   "i": 5,
+   "kind": "para",
+   "html": "<p>next 的签名很简单：每调用一次，返回一个 Option。如果还有元素，返回 Some 加上这个元素；如果没有了，返回 None。就这么一个方法，撑起了 Rust 整个迭代器生态。</p>",
+   "start": 60.706,
+   "end": 74.615,
+   "spoken": "next 的签名很简单：每调用一次，返回一个 Option。如果还有元素，返回 Some 加上这个元素；如果没有了，返回 None。就这么一个方法，撑起了 Rust 整个迭代器生态。"
+  },
+  {
+   "i": 6,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">trait Iterator {\n    type Item;\n    fn next(&amp;mut self) -&gt; Option&lt;Self::Item&gt;;\n}\n</code></pre>",
+   "start": 74.615,
+   "end": 74.615
+  },
+  {
+   "i": 7,
+   "kind": "para",
+   "html": "<p>这里出现了一个新语法：type Item，叫做关联类型。你可以把它理解为迭代器产出的元素的类型。一个迭代器遍历 i32，它的 Item 就是 i32；遍历 String，Item 就是 String。</p>",
+   "start": 75.165,
+   "end": 91.454,
+   "spoken": "这里出现了一个新语法：type Item，叫做关联类型。你可以把它理解为迭代器产出的元素的类型。一个迭代器遍历 i32，它的 Item 就是 i32；遍历 String，Item 就是 String。"
+  },
+  {
+   "i": 8,
+   "kind": "para",
+   "html": "<p>我们来动手实现一个最简单的迭代器：一个从某个数开始倒数到零的计数器。</p>",
+   "start": 92.004,
+   "end": 98.436,
+   "spoken": "我们来动手实现一个最简单的迭代器：一个从某个数开始倒数到零的计数器。"
+  },
+  {
+   "i": 9,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">struct Countdown {\n    value: u32,\n}\n\nimpl Iterator for Countdown {\n    type Item = u32;\n\n    fn next(&amp;mut self) -&gt; Option&lt;u32&gt; {\n        if self.value &gt; 0 {\n            self.value -= 1;\n            Some(self.value + 1)\n        }  else {\n            None\n        }\n    }\n}\n</code></pre>",
+   "start": 98.436,
+   "end": 98.436
+  },
+  {
+   "i": 10,
+   "kind": "para",
+   "html": "<p>有了这个实现，你就可以用 for 循环来遍历它，也可以调用 map、filter 这些方法。因为这些方法都是 Iterator trait 提供的默认实现，你只要实现了 next，几十个方法就免费获得了。</p>",
+   "start": 98.986,
+   "end": 113.312,
+   "spoken": "有了这个实现，你就可以用 for 循环来遍历它，也可以调用 map、filter 这些方法。因为这些方法都是 Iterator trait 提供的默认实现，你只要实现了 next，几十个方法就免费获得了。"
+  },
+  {
+   "i": 11,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let countdown = Countdown { value: 5 };\nfor n in countdown {\n    println!(&quot;{n}&quot;);\n}\n</code></pre>",
+   "start": 113.312,
+   "end": 113.312
+  },
+  {
+   "i": 12,
+   "kind": "para",
+   "html": "<p>所以记住：Iterator trait 的核心就是 next 方法。实现了 next，你就拥有了整个迭代器工具箱。</p>",
+   "start": 113.862,
+   "end": 121.746,
+   "spoken": "所以记住：Iterator trait 的核心就是 next 方法。实现了 next，你就拥有了整个迭代器工具箱。"
+  },
+  {
+   "i": 13,
+   "kind": "heading",
+   "html": "<h2>惰性求值：不到终点不干活</h2>",
+   "level": 2,
+   "start": 122.296,
+   "end": 125.024,
+   "spoken": "惰性求值：不到终点不干活"
+  },
+  {
+   "i": 14,
+   "kind": "para",
+   "html": "<p>迭代器有一个非常重要的特性：惰性求值。当你调用 map 或者 filter 的时候，它们不会立即执行。它们只是记录下&quot;你想做什么&quot;，然后返回一个新的迭代器。真正的计算要等到你调用 collect、for 循环、或者其他消费方法的时候才会发生。</p>",
+   "start": 125.924,
+   "end": 145.707,
+   "spoken": "迭代器有一个非常重要的特性：惰性求值。当你调用 map 或者 filter 的时候，它们不会立即执行。它们只是记录下\"你想做什么\"，然后返回一个新的迭代器。真正的计算要等到你调用 collect、for 循环、或者其他消费方法的时候才会发生。"
+  },
+  {
+   "i": 15,
+   "kind": "para",
+   "html": "<p>来看一个例子。这两行代码创建了一个迭代器链，但什么都没有发生。</p>",
+   "start": 146.257,
+   "end": 152.097,
+   "spoken": "来看一个例子。这两行代码创建了一个迭代器链，但什么都没有发生。"
+  },
+  {
+   "i": 16,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let v = vec![1, 2, 3, 4, 5];\nlet iter = v.iter().map(|x| x * 2).filter(|x| *x &gt; 4);\n</code></pre>",
+   "start": 152.097,
+   "end": 152.097
+  },
+  {
+   "i": 17,
+   "kind": "para",
+   "html": "<p>这里的 map 和 filter 各自返回一个新的迭代器，包裹着前一个迭代器。但没有任何元素被计算过。只有当你调用 collect 的时候，整条链才开始从头到尾运转。</p>",
+   "start": 152.647,
+   "end": 165.395,
+   "spoken": "这里的 map 和 filter 各自返回一个新的迭代器，包裹着前一个迭代器。但没有任何元素被计算过。只有当你调用 collect 的时候，整条链才开始从头到尾运转。"
+  },
+  {
+   "i": 18,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let result: Vec&lt;i32&gt; = v.iter().map(|x| x * 2).filter(|x| *x &gt; 4).collect();\n</code></pre>",
+   "start": 165.395,
+   "end": 165.395
+  },
+  {
+   "i": 19,
+   "kind": "para",
+   "html": "<p>惰性求值的好处是：如果你只需要前三个满足条件的元素，你可以在链的最后加上 take，迭代器会在拿到三个元素后立刻停下来，不会遍历整个集合。这在处理大数据或者无限序列的时候非常有价值。</p>",
+   "start": 165.945,
+   "end": 182.408,
+   "spoken": "惰性求值的好处是：如果你只需要前三个满足条件的元素，你可以在链的最后加上 take，迭代器会在拿到三个元素后立刻停下来，不会遍历整个集合。这在处理大数据或者无限序列的时候非常有价值。"
+  },
+  {
+   "i": 20,
+   "kind": "heading",
+   "html": "<h2>常用的迭代器适配器</h2>",
+   "level": 2,
+   "start": 182.958,
+   "end": 185.466,
+   "spoken": "常用的迭代器适配器"
+  },
+  {
+   "i": 21,
+   "kind": "para",
+   "html": "<p>Rust 标准库提供了几十个迭代器方法。我们来看最常用的几个。</p>",
+   "start": 186.366,
+   "end": 191.776,
+   "spoken": "Rust 标准库提供了几十个迭代器方法。我们来看最常用的几个。"
+  },
+  {
+   "i": 22,
+   "kind": "para",
+   "html": "<p>map 对每个元素做一次变换。你传入一个 closure，它接收一个元素，返回一个新元素。</p>",
+   "start": 192.326,
+   "end": 199.489,
+   "spoken": "map 对每个元素做一次变换。你传入一个 closure，它接收一个元素，返回一个新元素。"
+  },
+  {
+   "i": 23,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let names = vec![&quot;alice&quot;, &quot;bob&quot;, &quot;charlie&quot;];\nlet upper: Vec&lt;String&gt; = names.iter().map(|s| s.to_uppercase()).collect();\n</code></pre>",
+   "start": 199.489,
+   "end": 199.489
+  },
+  {
+   "i": 24,
+   "kind": "para",
+   "html": "<p>filter 保留满足条件的元素，丢弃不满足的。注意 filter 的 closure 接收的是引用的引用，因为 filter 不想拿走元素的所有权。</p>",
+   "start": 200.039,
+   "end": 210.105,
+   "spoken": "filter 保留满足条件的元素，丢弃不满足的。注意 filter 的 closure 接收的是引用的引用，因为 filter 不想拿走元素的所有权。"
+  },
+  {
+   "i": 25,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let numbers = vec![1, 2, 3, 4, 5, 6];\nlet evens: Vec&lt;&amp;i32&gt; = numbers.iter().filter(|n| *n % 2 == 0).collect();\n</code></pre>",
+   "start": 210.105,
+   "end": 210.105
+  },
+  {
+   "i": 26,
+   "kind": "para",
+   "html": "<p>enumerate 给每个元素加上一个从零开始的索引。返回的是一个元组，第一个是索引，第二个是元素。在你需要同时知道&quot;第几个&quot;和&quot;是什么&quot;的时候非常好用。</p>",
+   "start": 210.655,
+   "end": 223.368,
+   "spoken": "enumerate 给每个元素加上一个从零开始的索引。返回的是一个元组，第一个是索引，第二个是元素。在你需要同时知道\"第几个\"和\"是什么\"的时候非常好用。"
+  },
+  {
+   "i": 27,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let fruits = vec![&quot;apple&quot;, &quot;banana&quot;, &quot;cherry&quot;];\nfor (i, fruit) in fruits.iter().enumerate() {\n    println!(&quot;{i}: {fruit}&quot;);\n}\n</code></pre>",
+   "start": 223.368,
+   "end": 223.368
+  },
+  {
+   "i": 28,
+   "kind": "para",
+   "html": "<p>zip 把两个迭代器配对。它把两个迭代器的元素一一对应地组合成元组，长度以较短的那个为准。</p>",
+   "start": 223.918,
+   "end": 232.405,
+   "spoken": "zip 把两个迭代器配对。它把两个迭代器的元素一一对应地组合成元组，长度以较短的那个为准。"
+  },
+  {
+   "i": 29,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let names = vec![&quot;alice&quot;, &quot;bob&quot;];\nlet scores = vec![95, 87];\nlet pairs: Vec&lt;_&gt; = names.iter().zip(scores.iter()).collect();\n</code></pre>",
+   "start": 232.405,
+   "end": 232.405
+  },
+  {
+   "i": 30,
+   "kind": "para",
+   "html": "<p><code>flat_map</code> 是 map 和 flatten 的结合。当你的变换函数返回一个迭代器的时候，flat map 会把所有返回的迭代器展平成一个。</p>",
+   "start": 232.955,
+   "end": 242.591,
+   "spoken": "flat map 是 map 和 flatten 的结合。当你的变换函数返回一个迭代器的时候，flat map 会把所有返回的迭代器展平成一个。"
+  },
+  {
+   "i": 31,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let sentences = vec![&quot;hello world&quot;, &quot;foo bar&quot;];\nlet words: Vec&lt;&amp;str&gt; = sentences.iter().flat_map(|s| s.split_whitespace()).collect();\n</code></pre>",
+   "start": 242.591,
+   "end": 242.591
+  },
+  {
+   "i": 32,
+   "kind": "para",
+   "html": "<p>最后是 fold，它把所有元素归约成一个值。你提供一个初始值和一个累加函数。求和、求积、拼接字符串，都可以用 fold。</p>",
+   "start": 243.141,
+   "end": 254.02,
+   "spoken": "最后是 fold，它把所有元素归约成一个值。你提供一个初始值和一个累加函数。求和、求积、拼接字符串，都可以用 fold。"
+  },
+  {
+   "i": 33,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let sum = vec![1, 2, 3, 4, 5].iter().fold(0, |acc, x| acc + x);\n</code></pre>",
+   "start": 254.02,
+   "end": 254.02
+  },
+  {
+   "i": 34,
+   "kind": "para",
+   "html": "<p>这些方法可以自由组合。一条迭代器链可以有 map、filter、take、collect 串在一起，读起来就像在描述&quot;对数据做什么&quot;，而不是&quot;怎么一步一步做&quot;。这就是声明式风格的魅力。</p>",
+   "start": 254.57,
+   "end": 270.011,
+   "spoken": "这些方法可以自由组合。一条迭代器链可以有 map、filter、take、collect 串在一起，读起来就像在描述\"对数据做什么\"，而不是\"怎么一步一步做\"。这就是声明式风格的魅力。"
+  },
+  {
+   "i": 35,
+   "kind": "heading",
+   "html": "<h2>Vec：最常用的集合</h2>",
+   "level": 2,
+   "start": 270.561,
+   "end": 272.732,
+   "spoken": "Vec：最常用的集合"
+  },
+  {
+   "i": 36,
+   "kind": "para",
+   "html": "<p>说完迭代器，我们来看集合。Vec，也就是动态数组，是 Rust 里最常用的集合类型。</p>",
+   "start": 273.632,
+   "end": 280.97,
+   "spoken": "说完迭代器，我们来看集合。Vec，也就是动态数组，是 Rust 里最常用的集合类型。"
+  },
+  {
+   "i": 37,
+   "kind": "para",
+   "html": "<p>创建一个 Vec 有两种常见方式：用 new 创建空的，或者用 vec 宏直接给出初始值。</p>",
+   "start": 281.52,
+   "end": 289.113,
+   "spoken": "创建一个 Vec 有两种常见方式：用 new 创建空的，或者用 vec 宏直接给出初始值。"
+  },
+  {
+   "i": 38,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let mut v1: Vec&lt;i32&gt; = Vec::new();\nv1.push(1);\nv1.push(2);\n\nlet v2 = vec![1, 2, 3];\n</code></pre>",
+   "start": 289.113,
+   "end": 289.113
+  },
+  {
+   "i": 39,
+   "kind": "para",
+   "html": "<p>Vec 拥有它里面所有元素的所有权。当 Vec 被释放的时候，里面的每个元素也会被释放。这和所有权规则完全一致。</p>",
+   "start": 289.663,
+   "end": 299.218,
+   "spoken": "Vec 拥有它里面所有元素的所有权。当 Vec 被释放的时候，里面的每个元素也会被释放。这和所有权规则完全一致。"
+  },
+  {
+   "i": 40,
+   "kind": "para",
+   "html": "<p>这里有一个重要的话题：遍历 Vec 的时候，你选择哪种迭代器方式，决定了所有权的去向。Rust 提供了三种方法。</p>",
+   "start": 299.768,
+   "end": 310.937,
+   "spoken": "这里有一个重要的话题：遍历 Vec 的时候，你选择哪种迭代器方式，决定了所有权的去向。Rust 提供了三种方法。"
+  },
+  {
+   "i": 41,
+   "kind": "para",
+   "html": "<p>第一种是 iter，返回不可变引用。遍历之后 Vec 还在，你还能用它。</p>",
+   "start": 311.487,
+   "end": 317.791,
+   "spoken": "第一种是 iter，返回不可变引用。遍历之后 Vec 还在，你还能用它。"
+  },
+  {
+   "i": 42,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let v = vec![1, 2, 3];\nfor n in v.iter() {\n    println!(&quot;{n}&quot;);\n}\nprintln!(&quot;v still exists: {:?}&quot;, v);\n</code></pre>",
+   "start": 317.791,
+   "end": 317.791
+  },
+  {
+   "i": 43,
+   "kind": "para",
+   "html": "<p>第二种是 <code>iter_mut</code>，返回可变引用。你可以在遍历的同时修改每个元素，但 Vec 本身必须是 mut 的。</p>",
+   "start": 318.341,
+   "end": 327.541,
+   "spoken": "第二种是 iter mut，返回可变引用。你可以在遍历的同时修改每个元素，但 Vec 本身必须是 mut 的。"
+  },
+  {
+   "i": 44,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let mut v = vec![1, 2, 3];\nfor n in v.iter_mut() {\n    *n *= 2;\n}\n</code></pre>",
+   "start": 327.541,
+   "end": 327.541
+  },
+  {
+   "i": 45,
+   "kind": "para",
+   "html": "<p>第三种是 <code>into_iter</code>，消耗 Vec 本身，把每个元素的所有权交出来。遍历之后 Vec 就没了。当你在 for 循环里直接写 for n in v，Rust 调用的就是 into iter。</p>",
+   "start": 328.091,
+   "end": 342.546,
+   "spoken": "第三种是 into iter，消耗 Vec 本身，把每个元素的所有权交出来。遍历之后 Vec 就没了。当你在 for 循环里直接写 for n in v，Rust 调用的就是 into iter。"
+  },
+  {
+   "i": 46,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let v = vec![String::from(&quot;a&quot;), String::from(&quot;b&quot;)];\nfor s in v {\n    println!(&quot;{s}&quot;);\n    // s 的所有权在这个循环体里\n}\n// v 已经不能用了\n</code></pre>",
+   "start": 342.546,
+   "end": 342.546
+  },
+  {
+   "i": 47,
+   "kind": "para",
+   "html": "<p>这三种方式的选择取决于你的需求：只需要读，用 iter；需要改，用 iter mut；需要拿走元素，用 into iter。</p>",
+   "start": 343.096,
+   "end": 353.161,
+   "spoken": "这三种方式的选择取决于你的需求：只需要读，用 iter；需要改，用 iter mut；需要拿走元素，用 into iter。"
+  },
+  {
+   "i": 48,
+   "kind": "heading",
+   "html": "<h2>HashMap：键值对的集合</h2>",
+   "level": 2,
+   "start": 353.711,
+   "end": 356.057,
+   "spoken": "HashMap：键值对的集合"
+  },
+  {
+   "i": 49,
+   "kind": "para",
+   "html": "<p>另一个常用的集合是 HashMap。它存储键值对，通过键来快速查找值。HashMap 不在预导入模块里，需要手动引入。</p>",
+   "start": 356.957,
+   "end": 366.384,
+   "spoken": "另一个常用的集合是 HashMap。它存储键值对，通过键来快速查找值。HashMap 不在预导入模块里，需要手动引入。"
+  },
+  {
+   "i": 50,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::collections::HashMap;\n\nlet mut scores = HashMap::new();\nscores.insert(String::from(&quot;alice&quot;), 95);\nscores.insert(String::from(&quot;bob&quot;), 87);\n</code></pre>",
+   "start": 366.384,
+   "end": 366.384
+  },
+  {
+   "i": 51,
+   "kind": "para",
+   "html": "<p>查询的时候用 get 方法，它返回一个 Option。因为你查的键可能不存在，所以 Rust 用 Option 来表达这个可能性。</p>",
+   "start": 366.934,
+   "end": 375.63,
+   "spoken": "查询的时候用 get 方法，它返回一个 Option。因为你查的键可能不存在，所以 Rust 用 Option 来表达这个可能性。"
+  },
+  {
+   "i": 52,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">if let Some(score) = scores.get(&quot;alice&quot;) {\n    println!(&quot;alice's score: {score}&quot;);\n}\n</code></pre>",
+   "start": 375.63,
+   "end": 375.63
+  },
+  {
+   "i": 53,
+   "kind": "para",
+   "html": "<p>HashMap 的所有权规则和 Vec 一样直觉：对于实现了 Copy 的类型，比如 i32，值会被复制进去。对于拥有所有权的类型，比如 String，所有权会被 move 进 HashMap。</p>",
+   "start": 376.18,
+   "end": 389.102,
+   "spoken": "HashMap 的所有权规则和 Vec 一样直觉：对于实现了 Copy 的类型，比如 i32，值会被复制进去。对于拥有所有权的类型，比如 String，所有权会被 move 进 HashMap。"
+  },
+  {
+   "i": 54,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let key = String::from(&quot;charlie&quot;);\nlet value = 92;\nscores.insert(key, value);\n// key 已经被 move 进去了，不能再用\n// value 是 i32，实现了 Copy，还能用\n</code></pre>",
+   "start": 389.102,
+   "end": 389.102
+  },
+  {
+   "i": 55,
+   "kind": "para",
+   "html": "<p>遍历 HashMap 用 for 循环，每次拿到一个键值对的引用。</p>",
+   "start": 389.652,
+   "end": 394.47,
+   "spoken": "遍历 HashMap 用 for 循环，每次拿到一个键值对的引用。"
+  },
+  {
+   "i": 56,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">for (name, score) in &amp;scores {\n    println!(&quot;{name}: {score}&quot;);\n}\n</code></pre>",
+   "start": 394.47,
+   "end": 394.47
+  },
+  {
+   "i": 57,
+   "kind": "para",
+   "html": "<p>HashMap 还有一个很实用的方法叫 entry。它让你检查一个键是否存在，如果不存在就插入一个默认值。这在统计词频这类场景里特别好用。</p>",
+   "start": 395.02,
+   "end": 405.899,
+   "spoken": "HashMap 还有一个很实用的方法叫 entry。它让你检查一个键是否存在，如果不存在就插入一个默认值。这在统计词频这类场景里特别好用。"
+  },
+  {
+   "i": 58,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let text = &quot;hello world hello rust&quot;;\nlet mut word_count = HashMap::new();\nfor word in text.split_whitespace() {\n    let count = word_count.entry(word).or_insert(0);\n    *count += 1;\n}\n</code></pre>",
+   "start": 405.899,
+   "end": 405.899
+  },
+  {
+   "i": 59,
+   "kind": "para",
+   "html": "<p>entry 返回一个 Entry enum，<code>or_insert</code> 在键不存在时插入默认值，然后返回值的可变引用。这样你就可以直接在原地修改。</p>",
+   "start": 406.449,
+   "end": 418.651,
+   "spoken": "entry 返回一个 Entry enum，or insert 在键不存在时插入默认值，然后返回值的可变引用。这样你就可以直接在原地修改。"
+  },
+  {
+   "i": 60,
+   "kind": "heading",
+   "html": "<h2>回顾</h2>",
+   "level": 2,
+   "start": 419.201,
+   "end": 419.967,
+   "spoken": "回顾"
+  },
+  {
+   "i": 61,
+   "kind": "para",
+   "html": "<p>我们来总结这一章的核心内容。</p>",
+   "start": 420.867,
+   "end": 423.34,
+   "spoken": "我们来总结这一章的核心内容。"
+  },
+  {
+   "i": 62,
+   "kind": "para",
+   "html": "<p>第一，Iterator trait 的核心是 next 方法。实现了 next，你就自动获得了 map、filter、collect 等几十个方法。</p>",
+   "start": 423.89,
+   "end": 433.398,
+   "spoken": "第一，Iterator trait 的核心是 next 方法。实现了 next，你就自动获得了 map、filter、collect 等几十个方法。"
+  },
+  {
+   "i": 63,
+   "kind": "para",
+   "html": "<p>第二，迭代器是惰性的。链式调用不会立即执行，直到遇到 collect 或 for 循环这样的消费者才开始计算。这让迭代器既优雅又高效。</p>",
+   "start": 433.948,
+   "end": 445.082,
+   "spoken": "第二，迭代器是惰性的。链式调用不会立即执行，直到遇到 collect 或 for 循环这样的消费者才开始计算。这让迭代器既优雅又高效。"
+  },
+  {
+   "i": 64,
+   "kind": "para",
+   "html": "<p>第三，遍历 Vec 有三种方式：iter 借用、iter mut 可变借用、into iter 消耗。选择哪种取决于你要不要保留 Vec，要不要修改元素。</p>",
+   "start": 445.632,
+   "end": 457.788,
+   "spoken": "第三，遍历 Vec 有三种方式：iter 借用、iter mut 可变借用、into iter 消耗。选择哪种取决于你要不要保留 Vec，要不要修改元素。"
+  },
+  {
+   "i": 65,
+   "kind": "para",
+   "html": "<p>第四，HashMap 存储键值对，查询返回 Option，entry 方法让&quot;不存在就插入&quot;变得简洁。集合类型的所有权规则和其他地方完全一致。</p>",
+   "start": 458.338,
+   "end": 470.749,
+   "spoken": "第四，HashMap 存储键值对，查询返回 Option，entry 方法让\"不存在就插入\"变得简洁。集合类型的所有权规则和其他地方完全一致。"
+  },
+  {
+   "i": 66,
+   "kind": "para",
+   "html": "<p>下一章我们讲 closure，也就是闭包。你在这一章已经用了很多 closure 了——传给 map 的那个竖线加表达式，传给 filter 的条件函数，都是 closure。下一章会讲清楚 closure 怎么捕获周围的变量，以及这件事和所有权之间的关系。</p>",
+   "start": 471.299,
+   "end": 488.784,
+   "spoken": "下一章我们讲 closure，也就是闭包。你在这一章已经用了很多 closure 了——传给 map 的那个竖线加表达式，传给 filter 的条件函数，都是 closure。下一章会讲清楚 closure 怎么捕获周围的变量，以及这件事和所有权之间的关系。"
+  }
+ ]
+}

@@ -1,0 +1,445 @@
+{
+ "id": "10-concurrency",
+ "title": "第十章 并发：编译器守护的安全感",
+ "audio": "10-concurrency.mp3",
+ "duration": 637.03,
+ "language": "zh",
+ "provider": "minimax",
+ "voice": "Chinese (Mandarin)_Warm_Bestie",
+ "source_hash": "a47982b59c112d1b1ea97a08427681f9359877a8fb1165998def38afcd757095",
+ "generated_at": "2026-09-20T04:49:33+00:00",
+ "segments": [
+  {
+   "i": 0,
+   "kind": "heading",
+   "html": "<h1>第十章 并发：编译器守护的安全感</h1>",
+   "level": 1,
+   "start": 0.0,
+   "end": 3.239,
+   "spoken": "第十章 并发：编译器守护的安全感"
+  },
+  {
+   "i": 1,
+   "kind": "para",
+   "html": "<p>你写了一个多线程程序。两个线程同时修改同一个变量，没有加锁。在 C 里，这个程序可能今天跑一百次都没事，明天突然在生产环境崩溃。这就是数据竞争——最难复现、最难调试的 bug 之一。在 Java 或 Python 里，运行时会抛异常或者给你一个莫名其妙的结果。但在 Rust 里，这段代码根本编译不过。编译器在你写完代码的那一刻就告诉你：这样做不安全。</p>",
+   "start": 4.139,
+   "end": 33.872,
+   "spoken": "你写了一个多线程程序。两个线程同时修改同一个变量，没有加锁。在 C 里，这个程序可能今天跑一百次都没事，明天突然在生产环境崩溃。这就是数据竞争——最难复现、最难调试的 bug 之一。在 Java 或 Python 里，运行时会抛异常或者给你一个莫名其妙的结果。但在 Rust 里，这段代码根本编译不过。编译器在你写完代码的那一刻就告诉你：这样做不安全。"
+  },
+  {
+   "i": 2,
+   "kind": "para",
+   "html": "<p>Rust 把这种能力叫做&quot;无畏并发&quot;。这一章讲四件事：怎么用 spawn 和 move closure 创建线程，Send 和 Sync 这两个 trait 意味着什么，怎么用 Arc 加 Mutex 共享可变状态，以及怎么用 channel 做消息传递。</p>",
+   "start": 34.422,
+   "end": 52.088,
+   "spoken": "Rust 把这种能力叫做\"无畏并发\"。这一章讲四件事：怎么用 spawn 和 move closure 创建线程，Send 和 Sync 这两个 trait 意味着什么，怎么用 Arc 加 Mutex 共享可变状态，以及怎么用 channel 做消息传递。"
+  },
+  {
+   "i": 3,
+   "kind": "heading",
+   "html": "<h2>创建线程：spawn 和 move closure</h2>",
+   "level": 2,
+   "start": 52.638,
+   "end": 56.005,
+   "spoken": "创建线程：spawn 和 move closure"
+  },
+  {
+   "i": 4,
+   "kind": "para",
+   "html": "<p>在 Rust 里创建线程很简单。调用 <code>std::thread::spawn</code>，传一个 closure 进去，就得到一个新线程。spawn 返回一个 JoinHandle，你可以用 join 方法等待线程结束。</p>",
+   "start": 56.905,
+   "end": 69.955,
+   "spoken": "在 Rust 里创建线程很简单。调用 std thread spawn，传一个 closure 进去，就得到一个新线程。spawn 返回一个 JoinHandle，你可以用 join 方法等待线程结束。"
+  },
+  {
+   "i": 5,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::thread;\nuse std::time::Duration;\n\nfn main() {\n    let handle = thread::spawn(|| {\n        for i in 1..5 {\n            println!(&quot;子线程: {i}&quot;);\n            thread::sleep(Duration::from_millis(1));\n        }\n    });\n\n    for i in 1..3 {\n        println!(&quot;主线程: {i}&quot;);\n        thread::sleep(Duration::from_millis(1));\n    }\n\n    handle.join().unwrap();\n}\n</code></pre>",
+   "start": 69.955,
+   "end": 69.955
+  },
+  {
+   "i": 6,
+   "kind": "para",
+   "html": "<p>这段代码创建了一个子线程，主线程和子线程会交替打印。join 确保主线程在子线程结束前不会退出。</p>",
+   "start": 70.505,
+   "end": 79.805,
+   "spoken": "这段代码创建了一个子线程，主线程和子线程会交替打印。join 确保主线程在子线程结束前不会退出。"
+  },
+  {
+   "i": 7,
+   "kind": "para",
+   "html": "<p>但如果你想把主线程里的数据传给子线程，事情就变得有趣了。上一章我们讲过，spawn 的 closure 必须用 move。原因是：新线程可能活得比创建它的函数更久，closure 不能借用一个可能先消失的变量。</p>",
+   "start": 80.355,
+   "end": 97.846,
+   "spoken": "但如果你想把主线程里的数据传给子线程，事情就变得有趣了。上一章我们讲过，spawn 的 closure 必须用 move。原因是：新线程可能活得比创建它的函数更久，closure 不能借用一个可能先消失的变量。"
+  },
+  {
+   "i": 8,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn main() {\n    let message = String::from(&quot;hello&quot;);\n    let handle = thread::spawn(move || {\n        println!(&quot;{message}&quot;);\n    });\n    // println!(&quot;{message}&quot;); // 编译错误：message 已经 move 了\n    handle.join().unwrap();\n}\n</code></pre>",
+   "start": 97.846,
+   "end": 97.846
+  },
+  {
+   "i": 9,
+   "kind": "para",
+   "html": "<p>move 把 message 的所有权转移给了新线程的 closure。主线程不能再用 message。这听起来像是限制，但正是这条规则保证了数据安全：同一份数据不会同时被两个线程持有。</p>",
+   "start": 98.396,
+   "end": 112.305,
+   "spoken": "move 把 message 的所有权转移给了新线程的 closure。主线程不能再用 message。这听起来像是限制，但正是这条规则保证了数据安全：同一份数据不会同时被两个线程持有。"
+  },
+  {
+   "i": 10,
+   "kind": "para",
+   "html": "<p>但问题来了：如果多个线程确实需要访问同一份数据怎么办？这就需要共享所有权，我们一会儿讲。先来看看 Rust 用什么机制在编译期保证线程安全。</p>",
+   "start": 112.855,
+   "end": 124.883,
+   "spoken": "但问题来了：如果多个线程确实需要访问同一份数据怎么办？这就需要共享所有权，我们一会儿讲。先来看看 Rust 用什么机制在编译期保证线程安全。"
+  },
+  {
+   "i": 11,
+   "kind": "heading",
+   "html": "<h2>Send 和 Sync：编译期的线程安全</h2>",
+   "level": 2,
+   "start": 125.433,
+   "end": 128.753,
+   "spoken": "Send 和 Sync：编译期的线程安全"
+  },
+  {
+   "i": 12,
+   "kind": "para",
+   "html": "<p>Rust 的线程安全建立在两个 marker trait 上：Send 和 Sync。它们不定义任何方法，只是一个标记，告诉编译器一个类型可以在线程之间怎么使用。</p>",
+   "start": 129.653,
+   "end": 141.043,
+   "spoken": "Rust 的线程安全建立在两个 marker trait 上：Send 和 Sync。它们不定义任何方法，只是一个标记，告诉编译器一个类型可以在线程之间怎么使用。"
+  },
+  {
+   "i": 13,
+   "kind": "para",
+   "html": "<p>Send 的意思是：这个类型的值可以安全地从一个线程发送到另一个线程。换句话说，所有权可以跨线程转移。Rust 里几乎所有类型都是 Send 的。一个典型的例外是 Rc：Rc 用非原子操作来维护引用计数，如果两个线程同时修改计数器，就会出错。所以 Rc 不是 Send 的，你没法把 Rc 发送到另一个线程。</p>",
+   "start": 141.593,
+   "end": 167.994,
+   "spoken": "Send 的意思是：这个类型的值可以安全地从一个线程发送到另一个线程。换句话说，所有权可以跨线程转移。Rust 里几乎所有类型都是 Send 的。一个典型的例外是 Rc：Rc 用非原子操作来维护引用计数，如果两个线程同时修改计数器，就会出错。所以 Rc 不是 Send 的，你没法把 Rc 发送到另一个线程。"
+  },
+  {
+   "i": 14,
+   "kind": "para",
+   "html": "<p>Sync 的意思是：这个类型的引用可以安全地在多个线程之间共享。也就是说，如果 T 是 Sync 的，那么 &amp;T 就是 Send 的。这意味着多个线程可以同时持有对 T 的不可变引用。大多数基础类型都是 Sync 的。RefCell 不是 Sync 的，因为它的运行时借用检查不是线程安全的。</p>",
+   "start": 168.544,
+   "end": 191.504,
+   "spoken": "Sync 的意思是：这个类型的引用可以安全地在多个线程之间共享。也就是说，如果 T 是 Sync 的，那么 对 T 的引用 就是 Send 的。这意味着多个线程可以同时持有对 T 的不可变引用。大多数基础类型都是 Sync 的。RefCell 不是 Sync 的，因为它的运行时借用检查不是线程安全的。"
+  },
+  {
+   "i": 15,
+   "kind": "para",
+   "html": "<p>这两个 trait 的关键在于：你不需要手动实现它们。编译器会自动根据类型的字段来判断。如果一个 struct 的所有字段都是 Send 的，那这个 struct 就自动是 Send 的。如果你尝试在线程之间发送一个不是 Send 的类型，编译器会直接报错。</p>",
+   "start": 192.054,
+   "end": 210.212,
+   "spoken": "这两个 trait 的关键在于：你不需要手动实现它们。编译器会自动根据类型的字段来判断。如果一个 struct 的所有字段都是 Send 的，那这个 struct 就自动是 Send 的。如果你尝试在线程之间发送一个不是 Send 的类型，编译器会直接报错。"
+  },
+  {
+   "i": 16,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::rc::Rc;\nuse std::thread;\n\nfn main() {\n    let data = Rc::new(42);\n    // let handle = thread::spawn(move || {\n    //     println!(&quot;{data}&quot;);\n    // });\n    // 编译错误：`Rc&lt;i32&gt;` cannot be sent between threads safely\n}\n</code></pre>",
+   "start": 210.212,
+   "end": 210.212
+  },
+  {
+   "i": 17,
+   "kind": "para",
+   "html": "<p>编译器的错误信息很明确：Rc 不能安全地在线程之间发送。它还会告诉你：如果你需要跨线程共享数据，考虑使用 Arc。</p>",
+   "start": 210.762,
+   "end": 221.594,
+   "spoken": "编译器的错误信息很明确：Rc 不能安全地在线程之间发送。它还会告诉你：如果你需要跨线程共享数据，考虑使用 Arc。"
+  },
+  {
+   "i": 18,
+   "kind": "para",
+   "html": "<p>所以记住：Send 和 Sync 不需要你写任何代码。编译器通过类型系统自动检查线程安全。在其他语言里，这些检查要么靠程序员自律，要么靠运行时检测。Rust 把它提前到了编译期。</p>",
+   "start": 222.144,
+   "end": 238.271,
+   "spoken": "所以记住：Send 和 Sync 不需要你写任何代码。编译器通过类型系统自动检查线程安全。在其他语言里，这些检查要么靠程序员自律，要么靠运行时检测。Rust 把它提前到了编译期。"
+  },
+  {
+   "i": 19,
+   "kind": "heading",
+   "html": "<h2>Arc 加 Mutex：共享可变状态</h2>",
+   "level": 2,
+   "start": 238.821,
+   "end": 241.677,
+   "spoken": "Arc 加 Mutex：共享可变状态"
+  },
+  {
+   "i": 20,
+   "kind": "para",
+   "html": "<p>好，我们回到刚才的问题：多个线程需要访问同一份数据。如果只是读取，用 Arc 包一下就行了。Arc 是 Rc 的线程安全版本，它用原子操作来维护引用计数，所以是 Send 加 Sync 的。</p>",
+   "start": 242.577,
+   "end": 258.355,
+   "spoken": "好，我们回到刚才的问题：多个线程需要访问同一份数据。如果只是读取，用 Arc 包一下就行了。Arc 是 Rc 的线程安全版本，它用原子操作来维护引用计数，所以是 Send 加 Sync 的。"
+  },
+  {
+   "i": 21,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::sync::Arc;\nuse std::thread;\n\nfn main() {\n    let data = Arc::new(String::from(&quot;hello&quot;));\n    let mut handles = vec![];\n\n    for i in 0..3 {\n        let data_clone = Arc::clone(&amp;data);\n        let handle = thread::spawn(move || {\n            println!(&quot;线程 {i}: {data_clone}&quot;);\n        });\n        handles.push(handle);\n    }\n\n    for handle in handles {\n        handle.join().unwrap();\n    }\n}\n</code></pre>",
+   "start": 258.355,
+   "end": 258.355
+  },
+  {
+   "i": 22,
+   "kind": "para",
+   "html": "<p>每个线程拿到 Arc 的一个 clone。注意，clone 一个 Arc 不会复制底层的 String，只是增加引用计数。所有线程共享同一份字符串数据。</p>",
+   "start": 258.905,
+   "end": 269.609,
+   "spoken": "每个线程拿到 Arc 的一个 clone。注意，clone 一个 Arc 不会复制底层的 String，只是增加引用计数。所有线程共享同一份字符串数据。"
+  },
+  {
+   "i": 23,
+   "kind": "para",
+   "html": "<p>但如果线程需要修改数据呢？Arc 只提供不可变访问。你需要内部可变性，这时候就要把 Mutex 装进 Arc。Mutex 是互斥锁，同一时刻只有一个线程能持有锁并修改里面的数据。</p>",
+   "start": 270.159,
+   "end": 286.158,
+   "spoken": "但如果线程需要修改数据呢？Arc 只提供不可变访问。你需要内部可变性，这时候就要把 Mutex 装进 Arc。Mutex 是互斥锁，同一时刻只有一个线程能持有锁并修改里面的数据。"
+  },
+  {
+   "i": 24,
+   "kind": "para",
+   "html": "<p>我们来写一个经典的例子：多个线程共同递增一个计数器。</p>",
+   "start": 286.708,
+   "end": 291.688,
+   "spoken": "我们来写一个经典的例子：多个线程共同递增一个计数器。"
+  },
+  {
+   "i": 25,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::sync::{Arc, Mutex};\nuse std::thread;\n\nfn main() {\n    let counter = Arc::new(Mutex::new(0));\n    let mut handles = vec![];\n\n    for _ in 0..10 {\n        let counter = Arc::clone(&amp;counter);\n        let handle = thread::spawn(move || {\n            let mut num = counter.lock().unwrap();\n            *num += 1;\n        });\n        handles.push(handle);\n    }\n\n    for handle in handles {\n        handle.join().unwrap();\n    }\n\n    println!(&quot;最终计数: {}&quot;, *counter.lock().unwrap());\n}\n</code></pre>",
+   "start": 291.688,
+   "end": 291.688
+  },
+  {
+   "i": 26,
+   "kind": "para",
+   "html": "<p>我们来拆解这段代码。counter 的类型是 <code>Arc&lt;Mutex&lt;i32&gt;&gt;</code>。外层的 Arc 让多个线程可以共享所有权。内层的 Mutex 保证同一时刻只有一个线程能修改里面的 i32。</p>",
+   "start": 292.238,
+   "end": 306.101,
+   "spoken": "我们来拆解这段代码。counter 的类型是 Arc Mutex i32。外层的 Arc 让多个线程可以共享所有权。内层的 Mutex 保证同一时刻只有一个线程能修改里面的 i32。"
+  },
+  {
+   "i": 27,
+   "kind": "para",
+   "html": "<p>每个线程先 clone 一份 Arc，然后 move 进 closure。在 closure 里，调用 lock 方法获取锁。lock 返回一个 MutexGuard，这是一个智能指针，可以通过它读写里面的值。当 MutexGuard 离开作用域，锁自动释放。这就是 R A I I 模式：获取资源的时候加锁，离开作用域的时候自动释放。不需要手动 unlock，也就不会忘记 unlock。</p>",
+   "start": 306.651,
+   "end": 332.796,
+   "spoken": "每个线程先 clone 一份 Arc，然后 move 进 closure。在 closure 里，调用 lock 方法获取锁。lock 返回一个 MutexGuard，这是一个智能指针，可以通过它读写里面的值。当 MutexGuard 离开作用域，锁自动释放。这就是 R A I I 模式：获取资源的时候加锁，离开作用域的时候自动释放。不需要手动 unlock，也就不会忘记 unlock。"
+  },
+  {
+   "i": 28,
+   "kind": "para",
+   "html": "<p>如果你漏掉 Arc，直接把 Mutex 传给线程会怎样？编译器会报错，因为 Mutex 被 move 进了第一个线程之后，第二个线程就没法用了。Arc 解决的正是这个问题：它让所有权被安全地共享。</p>",
+   "start": 333.346,
+   "end": 348.869,
+   "spoken": "如果你漏掉 Arc，直接把 Mutex 传给线程会怎样？编译器会报错，因为 Mutex 被 move 进了第一个线程之后，第二个线程就没法用了。Arc 解决的正是这个问题：它让所有权被安全地共享。"
+  },
+  {
+   "i": 29,
+   "kind": "para",
+   "html": "<p>如果你不用 Mutex，直接把 Arc 里的值改了会怎样？做不到。Arc 只提供不可变访问，你拿不到可变引用。Mutex 通过 lock 提供了内部可变性，而且是线程安全的内部可变性。</p>",
+   "start": 349.419,
+   "end": 364.001,
+   "spoken": "如果你不用 Mutex，直接把 Arc 里的值改了会怎样？做不到。Arc 只提供不可变访问，你拿不到可变引用。Mutex 通过 lock 提供了内部可变性，而且是线程安全的内部可变性。"
+  },
+  {
+   "i": 30,
+   "kind": "para",
+   "html": "<p>所以记住：Arc 加 Mutex 是 Rust 里共享可变状态的标准模式。Arc 提供跨线程的共享所有权，Mutex 提供线程安全的内部可变性，R A I I 保证锁一定会被释放。</p>",
+   "start": 364.551,
+   "end": 379.098,
+   "spoken": "所以记住：Arc 加 Mutex 是 Rust 里共享可变状态的标准模式。Arc 提供跨线程的共享所有权，Mutex 提供线程安全的内部可变性，R A I I 保证锁一定会被释放。"
+  },
+  {
+   "i": 31,
+   "kind": "heading",
+   "html": "<h2>Channel：消息传递</h2>",
+   "level": 2,
+   "start": 379.648,
+   "end": 381.611,
+   "spoken": "Channel：消息传递"
+  },
+  {
+   "i": 32,
+   "kind": "para",
+   "html": "<p>共享状态不是线程通信的唯一方式。另一种经典方式是消息传递。Rust 标准库提供了 mpsc channel，mpsc 的意思是 multiple producer, single consumer，也就是多个发送者、一个接收者。</p>",
+   "start": 382.511,
+   "end": 400.211,
+   "spoken": "共享状态不是线程通信的唯一方式。另一种经典方式是消息传递。Rust 标准库提供了 mpsc channel，mpsc 的意思是 multiple producer, single consumer，也就是多个发送者、一个接收者。"
+  },
+  {
+   "i": 33,
+   "kind": "para",
+   "html": "<p>创建一个 channel 会得到两个端：一个发送端 tx，一个接收端 rx。发送端可以 clone 给多个线程，但接收端只能有一个。</p>",
+   "start": 400.761,
+   "end": 411.661,
+   "spoken": "创建一个 channel 会得到两个端：一个发送端 tx，一个接收端 rx。发送端可以 clone 给多个线程，但接收端只能有一个。"
+  },
+  {
+   "i": 34,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::sync::mpsc;\nuse std::thread;\n\nfn main() {\n    let (tx, rx) = mpsc::channel();\n\n    thread::spawn(move || {\n        let message = String::from(&quot;hello&quot;);\n        tx.send(message).unwrap();\n        // println!(&quot;{message}&quot;); // 编译错误：message 已经被 send 了\n    });\n\n    let received = rx.recv().unwrap();\n    println!(&quot;收到: {received}&quot;);\n}\n</code></pre>",
+   "start": 411.661,
+   "end": 411.661
+  },
+  {
+   "i": 35,
+   "kind": "para",
+   "html": "<p>注意一个关键细节：send 会 move 值的所有权。调用 send 之后，message 就属于 channel 了，发送线程不能再使用它。这是所有权系统在保护你：如果发送之后发送线程还能修改 message，接收线程拿到的数据就可能不一致。</p>",
+   "start": 412.211,
+   "end": 430.671,
+   "spoken": "注意一个关键细节：send 会 move 值的所有权。调用 send 之后，message 就属于 channel 了，发送线程不能再使用它。这是所有权系统在保护你：如果发送之后发送线程还能修改 message，接收线程拿到的数据就可能不一致。"
+  },
+  {
+   "i": 36,
+   "kind": "para",
+   "html": "<p>recv 方法会阻塞当前线程，直到收到一条消息。如果你不想阻塞，可以用 try_recv，它会立即返回一个 Result。</p>",
+   "start": 431.221,
+   "end": 439.917,
+   "spoken": "recv 方法会阻塞当前线程，直到收到一条消息。如果你不想阻塞，可以用 try_recv，它会立即返回一个 Result。"
+  },
+  {
+   "i": 37,
+   "kind": "para",
+   "html": "<p>我们来看一个更完整的例子：多个生产者往同一个 channel 里发消息。</p>",
+   "start": 440.467,
+   "end": 446.179,
+   "spoken": "我们来看一个更完整的例子：多个生产者往同一个 channel 里发消息。"
+  },
+  {
+   "i": 38,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::sync::mpsc;\nuse std::thread;\n\nfn main() {\n    let (tx, rx) = mpsc::channel();\n\n    for i in 0..3 {\n        let tx_clone = tx.clone();\n        thread::spawn(move || {\n            let message = format!(&quot;来自线程 {i}&quot;);\n            tx_clone.send(message).unwrap();\n        });\n    }\n\n    drop(tx); // 关键：必须 drop 原始的 tx\n\n    for received in rx {\n        println!(&quot;收到: {received}&quot;);\n    }\n}\n</code></pre>",
+   "start": 446.179,
+   "end": 446.179
+  },
+  {
+   "i": 39,
+   "kind": "para",
+   "html": "<p>这里有一个容易踩的坑：原始的 tx 必须被 drop 掉。因为接收端的 for 循环会一直等，直到所有发送端都关闭。如果你忘了 drop 原始的 tx，程序就会永远等下去。每个线程里的 tx_clone 在线程结束时会自动 drop，但原始的 tx 还在 main 里活着。</p>",
+   "start": 446.729,
+   "end": 466.861,
+   "spoken": "这里有一个容易踩的坑：原始的 tx 必须被 drop 掉。因为接收端的 for 循环会一直等，直到所有发送端都关闭。如果你忘了 drop 原始的 tx，程序就会永远等下去。每个线程里的 tx_clone 在线程结束时会自动 drop，但原始的 tx 还在 main 里活着。"
+  },
+  {
+   "i": 40,
+   "kind": "para",
+   "html": "<p>channel 和 Arc 加 Mutex 各有适用场景。channel 适合一个方向的数据流，比如任务队列、日志收集。Arc 加 Mutex 适合多个线程需要读写同一块数据的场景，比如共享缓存。在实际项目中，两种方式经常一起使用。</p>",
+   "start": 467.411,
+   "end": 485.251,
+   "spoken": "channel 和 Arc 加 Mutex 各有适用场景。channel 适合一个方向的数据流，比如任务队列、日志收集。Arc 加 Mutex 适合多个线程需要读写同一块数据的场景，比如共享缓存。在实际项目中，两种方式经常一起使用。"
+  },
+  {
+   "i": 41,
+   "kind": "heading",
+   "html": "<h2>编译器的安全网</h2>",
+   "level": 2,
+   "start": 485.801,
+   "end": 487.287,
+   "spoken": "编译器的安全网"
+  },
+  {
+   "i": 42,
+   "kind": "para",
+   "html": "<p>我们来把这一章和前面几章串起来。Rust 的并发安全不是靠一个单独的机制，而是靠所有权、借用、trait 这些你已经学过的概念协同工作。</p>",
+   "start": 488.187,
+   "end": 499.53,
+   "spoken": "我们来把这一章和前面几章串起来。Rust 的并发安全不是靠一个单独的机制，而是靠所有权、借用、trait 这些你已经学过的概念协同工作。"
+  },
+  {
+   "i": 43,
+   "kind": "para",
+   "html": "<p>所有权系统保证一个值只有一个 owner，所以把值 move 给另一个线程后，原来的线程就用不了了，不会出现两个线程同时修改同一个变量。</p>",
+   "start": 500.08,
+   "end": 511.725,
+   "spoken": "所有权系统保证一个值只有一个 owner，所以把值 move 给另一个线程后，原来的线程就用不了了，不会出现两个线程同时修改同一个变量。"
+  },
+  {
+   "i": 44,
+   "kind": "para",
+   "html": "<p>借用规则保证同一时刻要么一个可变引用，要么多个不可变引用，这在单线程里防止数据竞争，在多线程里同样有效。</p>",
+   "start": 512.275,
+   "end": 522.294,
+   "spoken": "借用规则保证同一时刻要么一个可变引用，要么多个不可变引用，这在单线程里防止数据竞争，在多线程里同样有效。"
+  },
+  {
+   "i": 45,
+   "kind": "para",
+   "html": "<p>Send 和 Sync 这两个 trait 让编译器在类型层面追踪什么东西可以跨线程。不是 Send 的类型根本传不进 spawn，不是 Sync 的类型根本拿不到跨线程的共享引用。</p>",
+   "start": 522.844,
+   "end": 536.022,
+   "spoken": "Send 和 Sync 这两个 trait 让编译器在类型层面追踪什么东西可以跨线程。不是 Send 的类型根本传不进 spawn，不是 Sync 的类型根本拿不到跨线程的共享引用。"
+  },
+  {
+   "i": 46,
+   "kind": "para",
+   "html": "<p>这些规则叠在一起，结果就是：如果你的代码编译通过，编译器已经帮你排除了数据竞争。你不需要在代码审查时盯着每一个锁看有没有忘记加，不需要用动态检测工具来碰运气，也不需要祈祷那个只在高并发下出现的 bug 不会在生产环境里被触发。编译器就是你的安全网。</p>",
+   "start": 536.572,
+   "end": 558.7,
+   "spoken": "这些规则叠在一起，结果就是：如果你的代码编译通过，编译器已经帮你排除了数据竞争。你不需要在代码审查时盯着每一个锁看有没有忘记加，不需要用动态检测工具来碰运气，也不需要祈祷那个只在高并发下出现的 bug 不会在生产环境里被触发。编译器就是你的安全网。"
+  },
+  {
+   "i": 47,
+   "kind": "heading",
+   "html": "<h2>回顾</h2>",
+   "level": 2,
+   "start": 559.25,
+   "end": 560.017,
+   "spoken": "回顾"
+  },
+  {
+   "i": 48,
+   "kind": "para",
+   "html": "<p>我们来回顾这一章的要点。</p>",
+   "start": 560.917,
+   "end": 562.914,
+   "spoken": "我们来回顾这一章的要点。"
+  },
+  {
+   "i": 49,
+   "kind": "para",
+   "html": "<p>第一，用 spawn 加 move closure 创建线程。move 把数据的所有权转移给新线程，保证线程不会持有悬垂引用。</p>",
+   "start": 563.464,
+   "end": 573.019,
+   "spoken": "第一，用 spawn 加 move closure 创建线程。move 把数据的所有权转移给新线程，保证线程不会持有悬垂引用。"
+  },
+  {
+   "i": 50,
+   "kind": "para",
+   "html": "<p>第二，Send 和 Sync 是两个 marker trait，编译器自动根据类型的组成来判断。Send 表示值可以跨线程发送，Sync 表示引用可以跨线程共享。不满足的类型编译器直接拒绝。</p>",
+   "start": 573.569,
+   "end": 588.627,
+   "spoken": "第二，Send 和 Sync 是两个 marker trait，编译器自动根据类型的组成来判断。Send 表示值可以跨线程发送，Sync 表示引用可以跨线程共享。不满足的类型编译器直接拒绝。"
+  },
+  {
+   "i": 51,
+   "kind": "para",
+   "html": "<p>第三，Arc 加 Mutex 是共享可变状态的标准模式。Arc 提供线程安全的引用计数共享所有权，Mutex 提供线程安全的内部可变性，R A I I 保证锁一定释放。</p>",
+   "start": 589.177,
+   "end": 604.107,
+   "spoken": "第三，Arc 加 Mutex 是共享可变状态的标准模式。Arc 提供线程安全的引用计数共享所有权，Mutex 提供线程安全的内部可变性，R A I I 保证锁一定释放。"
+  },
+  {
+   "i": 52,
+   "kind": "para",
+   "html": "<p>第四，channel 做消息传递。send 会 move 值的所有权，保证发送后发送方不能再修改。mpsc 支持多个发送者、一个接收者。</p>",
+   "start": 604.657,
+   "end": 616.987,
+   "spoken": "第四，channel 做消息传递。send 会 move 值的所有权，保证发送后发送方不能再修改。mpsc 支持多个发送者、一个接收者。"
+  },
+  {
+   "i": 53,
+   "kind": "para",
+   "html": "<p>下一章我们讲智能指针。这一章里出现的 Arc 和 Mutex 就是智能指针。下一章我们系统讲清楚 Box、Rc、Arc、RefCell 各自解决什么问题，以及 Deref 和 Drop 这两个 trait 如何让智能指针像普通引用一样使用。</p>",
+   "start": 617.537,
+   "end": 636.48,
+   "spoken": "下一章我们讲智能指针。这一章里出现的 Arc 和 Mutex 就是智能指针。下一章我们系统讲清楚 Box、Rc、Arc、RefCell 各自解决什么问题，以及 Deref 和 Drop 这两个 trait 如何让智能指针像普通引用一样使用。"
+  }
+ ]
+}

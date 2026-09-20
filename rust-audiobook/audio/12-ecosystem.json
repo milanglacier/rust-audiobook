@@ -1,0 +1,368 @@
+{
+ "id": "12-ecosystem",
+ "title": "第十二章 生态与实践：从学到用",
+ "audio": "12-ecosystem.mp3",
+ "duration": 607.777,
+ "language": "zh",
+ "provider": "minimax",
+ "voice": "Chinese (Mandarin)_Warm_Bestie",
+ "source_hash": "6e4a74edc652c42a04703363fa5789ee608e2e82ead2f42c9f740e97b1e3ddf1",
+ "generated_at": "2026-09-20T04:50:43+00:00",
+ "segments": [
+  {
+   "i": 0,
+   "kind": "heading",
+   "html": "<h1>第十二章 生态与实践：从学到用</h1>",
+   "level": 1,
+   "start": 0.0,
+   "end": 4.133,
+   "spoken": "第十二章 生态与实践：从学到用"
+  },
+  {
+   "i": 1,
+   "kind": "para",
+   "html": "<p>恭喜你走到了最后一章。过去十一章，我们从一个 C 语言的 use-after-free bug 出发，一路走过了所有权、借用、生命周期、struct 和 enum、错误处理、trait、迭代器、closure、并发、智能指针。你现在已经掌握了 Rust 语言本身最核心的概念。但一门语言不只是语法和编译器，还有围绕它的工具和生态。Rust 之所以受欢迎，一半是因为语言本身的安全保证，另一半是因为它有一套极其好用的工具链。</p>",
+   "start": 5.033,
+   "end": 40.358,
+   "spoken": "恭喜你走到了最后一章。过去十一章，我们从一个 C 语言的 use-after-free bug 出发，一路走过了所有权、借用、生命周期、struct 和 enum、错误处理、trait、迭代器、closure、并发、智能指针。你现在已经掌握了 Rust 语言本身最核心的概念。但一门语言不只是语法和编译器，还有围绕它的工具和生态。Rust 之所以受欢迎，一半是因为语言本身的安全保证，另一半是因为它有一套极其好用的工具链。"
+  },
+  {
+   "i": 2,
+   "kind": "para",
+   "html": "<p>这一章讲四件事：第一，Cargo 是什么，怎么用。第二，怎么找到和使用社区的 crate。第三，Rust 的测试框架怎么用。第四，从这本书出发，你接下来可以往哪些方向走。</p>",
+   "start": 40.908,
+   "end": 55.026,
+   "spoken": "这一章讲四件事：第一，Cargo 是什么，怎么用。第二，怎么找到和使用社区的 crate。第三，Rust 的测试框架怎么用。第四，从这本书出发，你接下来可以往哪些方向走。"
+  },
+  {
+   "i": 3,
+   "kind": "heading",
+   "html": "<h2>Cargo：不只是包管理器</h2>",
+   "level": 2,
+   "start": 55.576,
+   "end": 57.666,
+   "spoken": "Cargo：不只是包管理器"
+  },
+  {
+   "i": 4,
+   "kind": "para",
+   "html": "<p>如果你用过 Python 的 pip、JavaScript 的 npm、或者 Java 的 Maven，你对包管理器已经有了基本的概念。但 Cargo 不只是一个包管理器，它是 Rust 的项目管理工具、构建系统、测试运行器、文档生成器，几乎所有和 Rust 项目有关的事情，都通过 Cargo 来做。</p>",
+   "start": 58.566,
+   "end": 77.711,
+   "spoken": "如果你用过 Python 的 pip、JavaScript 的 npm、或者 Java 的 Maven，你对包管理器已经有了基本的概念。但 Cargo 不只是一个包管理器，它是 Rust 的项目管理工具、构建系统、测试运行器、文档生成器，几乎所有和 Rust 项目有关的事情，都通过 Cargo 来做。"
+  },
+  {
+   "i": 5,
+   "kind": "para",
+   "html": "<p>创建一个新项目很简单。在终端运行 cargo new 加项目名，Cargo 就会帮你创建好目录结构、初始化一个 git 仓库、生成一个 Cargo.toml 配置文件和一个 main.rs 入口文件。</p>",
+   "start": 78.261,
+   "end": 92.332,
+   "spoken": "创建一个新项目很简单。在终端运行 cargo new 加项目名，Cargo 就会帮你创建好目录结构、初始化一个 git 仓库、生成一个 Cargo.toml 配置文件和一个 main.rs 入口文件。"
+  },
+  {
+   "i": 6,
+   "kind": "para",
+   "html": "<p>项目的核心配置在 Cargo.toml 里。它长这样。</p>",
+   "start": 92.882,
+   "end": 96.806,
+   "spoken": "项目的核心配置在 Cargo.toml 里。它长这样。"
+  },
+  {
+   "i": 7,
+   "kind": "display",
+   "html": "<pre><code class=\"language-toml\">[package]\nname = &quot;my-project&quot;\nversion = &quot;0.1.0&quot;\nedition = &quot;2021&quot;\n\n[dependencies]\nserde = { version = &quot;1.0&quot;, features = [&quot;derive&quot;] }\ntokio = { version = &quot;1&quot;, features = [&quot;full&quot;] }\n</code></pre>",
+   "start": 96.806,
+   "end": 96.806
+  },
+  {
+   "i": 8,
+   "kind": "para",
+   "html": "<p>package 部分是项目的基本信息。edition 指定 Rust 的版本年份，目前大多数项目用 2021。dependencies 列出了项目依赖的 crate 和版本号。</p>",
+   "start": 97.356,
+   "end": 109.767,
+   "spoken": "package 部分是项目的基本信息。edition 指定 Rust 的版本年份，目前大多数项目用 2021。dependencies 列出了项目依赖的 crate 和版本号。"
+  },
+  {
+   "i": 9,
+   "kind": "para",
+   "html": "<p>日常开发中你会反复用到几个 Cargo 命令。cargo build 编译项目，cargo run 编译并运行，cargo check 只做类型检查不生成二进制文件。cargo check 比 build 快很多，写代码的时候用 check 确认编译通过，只有真正要运行的时候才用 run。</p>",
+   "start": 110.317,
+   "end": 132.063,
+   "spoken": "日常开发中你会反复用到几个 Cargo 命令。cargo build 编译项目，cargo run 编译并运行，cargo check 只做类型检查不生成二进制文件。cargo check 比 build 快很多，写代码的时候用 check 确认编译通过，只有真正要运行的时候才用 run。"
+  },
+  {
+   "i": 10,
+   "kind": "para",
+   "html": "<p>cargo build 默认是 debug 模式，编译快但运行慢。当你需要发布或者做性能测试时，加上 release 标志：cargo build 加 release。release 模式会开启优化，编译时间更长但运行速度快得多。</p>",
+   "start": 132.613,
+   "end": 148.437,
+   "spoken": "cargo build 默认是 debug 模式，编译快但运行慢。当你需要发布或者做性能测试时，加上 release 标志：cargo build 加 release。release 模式会开启优化，编译时间更长但运行速度快得多。"
+  },
+  {
+   "i": 11,
+   "kind": "para",
+   "html": "<p>所以记住：Cargo 是你和 Rust 项目打交道的唯一入口。从创建项目到编译、测试、发布，都通过 Cargo。</p>",
+   "start": 148.987,
+   "end": 158.577,
+   "spoken": "所以记住：Cargo 是你和 Rust 项目打交道的唯一入口。从创建项目到编译、测试、发布，都通过 Cargo。"
+  },
+  {
+   "i": 12,
+   "kind": "heading",
+   "html": "<h2>依赖管理和 crates.io</h2>",
+   "level": 2,
+   "start": 159.127,
+   "end": 161.856,
+   "spoken": "依赖管理和 crates.io"
+  },
+  {
+   "i": 13,
+   "kind": "para",
+   "html": "<p>Rust 的包叫 crate。社区把 crate 发布在 crates.io 上，这是 Rust 的官方 crate 注册中心。截至目前，crates.io 上有超过十五万个 crate，覆盖了从 web 框架到嵌入式驱动的各种场景。</p>",
+   "start": 162.756,
+   "end": 178.452,
+   "spoken": "Rust 的包叫 crate。社区把 crate 发布在 crates.io 上，这是 Rust 的官方 crate 注册中心。截至目前，crates.io 上有超过十五万个 crate，覆盖了从 web 框架到嵌入式驱动的各种场景。"
+  },
+  {
+   "i": 14,
+   "kind": "para",
+   "html": "<p>添加依赖非常简单。在 Cargo.toml 的 dependencies 部分加上 crate 的名字和版本号，下次运行 cargo build 的时候 Cargo 就会自动下载并编译它。</p>",
+   "start": 179.002,
+   "end": 190.136,
+   "spoken": "添加依赖非常简单。在 Cargo.toml 的 dependencies 部分加上 crate 的名字和版本号，下次运行 cargo build 的时候 Cargo 就会自动下载并编译它。"
+  },
+  {
+   "i": 15,
+   "kind": "para",
+   "html": "<p>Cargo 还会生成一个 Cargo.lock 文件。这个文件锁定了所有依赖的精确版本，确保每个人在同一个项目上构建时用的是完全相同的依赖版本。对于可执行项目，你应该把 Cargo.lock 提交到版本控制里。对于库，通常不提交。</p>",
+   "start": 190.686,
+   "end": 209.193,
+   "spoken": "Cargo 还会生成一个 Cargo.lock 文件。这个文件锁定了所有依赖的精确版本，确保每个人在同一个项目上构建时用的是完全相同的依赖版本。对于可执行项目，你应该把 Cargo.lock 提交到版本控制里。对于库，通常不提交。"
+  },
+  {
+   "i": 16,
+   "kind": "para",
+   "html": "<p>怎么找到好的 crate？除了在 crates.io 上搜索，社区维护了一个叫 blessed.rs 的网站，它按类别推荐了经过广泛使用和验证的 crate。我推荐你入门时先看看这几个方向。</p>",
+   "start": 209.743,
+   "end": 224.197,
+   "spoken": "怎么找到好的 crate？除了在 crates.io 上搜索，社区维护了一个叫 blessed.rs 的网站，它按类别推荐了经过广泛使用和验证的 crate。我推荐你入门时先看看这几个方向。"
+  },
+  {
+   "i": 17,
+   "kind": "para",
+   "html": "<p>序列化和反序列化用 serde，这几乎是 Rust 生态里最重要的 crate，支持 JSON、YAML、TOML 等几十种格式。HTTP 客户端用 reqwest。命令行工具用 clap。异步运行时用 tokio。日志用 tracing。随机数用 rand。这些 crate 的使用率极高，文档也很完善，遇到问题很容易搜到答案。</p>",
+   "start": 224.747,
+   "end": 249.286,
+   "spoken": "序列化和反序列化用 serde，这几乎是 Rust 生态里最重要的 crate，支持 JSON、YAML、TOML 等几十种格式。HTTP 客户端用 reqwest。命令行工具用 clap。异步运行时用 tokio。日志用 tracing。随机数用 rand。这些 crate 的使用率极高，文档也很完善，遇到问题很容易搜到答案。"
+  },
+  {
+   "i": 18,
+   "kind": "para",
+   "html": "<p>所以记住：crates.io 是 Rust 的 crate 生态中心，Cargo 让依赖管理变得极其简单。好的 crate 选择能让你事半功倍。</p>",
+   "start": 249.836,
+   "end": 259.681,
+   "spoken": "所以记住：crates.io 是 Rust 的 crate 生态中心，Cargo 让依赖管理变得极其简单。好的 crate 选择能让你事半功倍。"
+  },
+  {
+   "i": 19,
+   "kind": "heading",
+   "html": "<h2>测试：内置在语言里的安全网</h2>",
+   "level": 2,
+   "start": 260.231,
+   "end": 263.215,
+   "spoken": "测试：内置在语言里的安全网"
+  },
+  {
+   "i": 20,
+   "kind": "para",
+   "html": "<p>很多语言的测试框架是第三方的，你需要选择、安装、配置。Rust 不一样，测试框架是语言和工具链的一部分。你不需要安装任何东西，写完测试直接 cargo test 就能跑。</p>",
+   "start": 264.115,
+   "end": 278.616,
+   "spoken": "很多语言的测试框架是第三方的，你需要选择、安装、配置。Rust 不一样，测试框架是语言和工具链的一部分。你不需要安装任何东西，写完测试直接 cargo test 就能跑。"
+  },
+  {
+   "i": 21,
+   "kind": "para",
+   "html": "<p>最简单的测试写法是在函数上加一个 test 属性。一个测试函数没有参数，没有返回值，用 assert 宏来检查结果。</p>",
+   "start": 279.166,
+   "end": 288.802,
+   "spoken": "最简单的测试写法是在函数上加一个 test 属性。一个测试函数没有参数，没有返回值，用 assert 宏来检查结果。"
+  },
+  {
+   "i": 22,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn add(a: i32, b: i32) -&gt; i32 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_add() {\n        assert_eq!(add(2, 3), 5);\n    }\n\n    #[test]\n    fn test_add_negative() {\n        assert_eq!(add(-1, 1), 0);\n    }\n}\n</code></pre>",
+   "start": 288.802,
+   "end": 288.802
+  },
+  {
+   "i": 23,
+   "kind": "para",
+   "html": "<p>cfg test 这个属性告诉编译器：这个模块只在运行测试时才编译。正常构建的时候它完全不存在，不占二进制文件的大小。</p>",
+   "start": 289.352,
+   "end": 299.5,
+   "spoken": "cfg test 这个属性告诉编译器：这个模块只在运行测试时才编译。正常构建的时候它完全不存在，不占二进制文件的大小。"
+  },
+  {
+   "i": 24,
+   "kind": "para",
+   "html": "<p>除了单元测试，Rust 还支持集成测试。在项目根目录创建一个 tests 目录，里面的每个 Rust 文件都是一个独立的集成测试。集成测试从外部调用你的库的公开接口，就像一个真正的用户一样。</p>",
+   "start": 300.05,
+   "end": 316.338,
+   "spoken": "除了单元测试，Rust 还支持集成测试。在项目根目录创建一个 tests 目录，里面的每个 Rust 文件都是一个独立的集成测试。集成测试从外部调用你的库的公开接口，就像一个真正的用户一样。"
+  },
+  {
+   "i": 25,
+   "kind": "para",
+   "html": "<p>Rust 还有一个很特别的功能：文档测试。你在文档注释里写的代码示例，cargo test 会自动编译和运行它们。这意味着你的文档示例永远不会过时——一旦示例和实际代码不一致，测试就会失败。</p>",
+   "start": 316.888,
+   "end": 332.922,
+   "spoken": "Rust 还有一个很特别的功能：文档测试。你在文档注释里写的代码示例，cargo test 会自动编译和运行它们。这意味着你的文档示例永远不会过时——一旦示例和实际代码不一致，测试就会失败。"
+  },
+  {
+   "i": 26,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">/// 计算两个数的和。\n///\n/// # Examples\n///\n/// ```\n/// let result = my_crate::add(2, 3);\n/// assert_eq!(result, 5);\n/// ```\npub fn add(a: i32, b: i32) -&gt; i32 {\n    a + b\n}\n</code></pre>",
+   "start": 332.922,
+   "end": 332.922
+  },
+  {
+   "i": 27,
+   "kind": "para",
+   "html": "<p>运行 cargo doc 加 open 会生成 HTML 文档并在浏览器里打开。文档注释使用三个斜杠开头，支持 Markdown 格式。Rust 社区非常重视文档质量，很多流行的 crate 文档都写得非常好，这也是 Rust 生态的一大优势。</p>",
+   "start": 333.472,
+   "end": 351.567,
+   "spoken": "运行 cargo doc 加 open 会生成 HTML 文档并在浏览器里打开。文档注释使用三个斜杠开头，支持 Markdown 格式。Rust 社区非常重视文档质量，很多流行的 crate 文档都写得非常好，这也是 Rust 生态的一大优势。"
+  },
+  {
+   "i": 28,
+   "kind": "para",
+   "html": "<p>所以记住：Rust 的测试是内置的。单元测试、集成测试、文档测试三种方式覆盖不同的需求，cargo test 一个命令全部跑完。</p>",
+   "start": 352.117,
+   "end": 363.333,
+   "spoken": "所以记住：Rust 的测试是内置的。单元测试、集成测试、文档测试三种方式覆盖不同的需求，cargo test 一个命令全部跑完。"
+  },
+  {
+   "i": 29,
+   "kind": "heading",
+   "html": "<h2>从这本书出发</h2>",
+   "level": 2,
+   "start": 363.883,
+   "end": 365.322,
+   "spoken": "从这本书出发"
+  },
+  {
+   "i": 30,
+   "kind": "para",
+   "html": "<p>学完这本书，你已经掌握了 Rust 的核心概念。但 Rust 还有很多我们没有涉及的领域。这里给你几个方向，供你根据兴趣选择。</p>",
+   "start": 366.222,
+   "end": 376.195,
+   "spoken": "学完这本书，你已经掌握了 Rust 的核心概念。但 Rust 还有很多我们没有涉及的领域。这里给你几个方向，供你根据兴趣选择。"
+  },
+  {
+   "i": 31,
+   "kind": "para",
+   "html": "<p>第一个方向是异步编程。async 和 await 是 Rust 处理并发 IO 的方式，web 服务、网络应用几乎都要用到。我们这本书讲了线程和 Mutex，那是 Rust 并发的一半。另一半是异步，它用协程而不是线程来处理大量并发连接。tokio 是最流行的异步运行时，axum 和 actix-web 是常用的异步 web 框架。</p>",
+   "start": 376.745,
+   "end": 402.945,
+   "spoken": "第一个方向是异步编程。async 和 await 是 Rust 处理并发 IO 的方式，web 服务、网络应用几乎都要用到。我们这本书讲了线程和 Mutex，那是 Rust 并发的一半。另一半是异步，它用协程而不是线程来处理大量并发连接。tokio 是最流行的异步运行时，axum 和 actix-web 是常用的异步 web 框架。"
+  },
+  {
+   "i": 32,
+   "kind": "para",
+   "html": "<p>第二个方向是 unsafe Rust。我们这本书讲的全部是 safe Rust，编译器帮你检查一切。但有些底层操作，比如和 C 库交互、手动管理裸指针、实现某些数据结构，需要绕过编译器的检查。unsafe 关键字让你在一个受限的范围内做这些事情。学习 unsafe 不是为了到处用它，而是为了理解安全抽象是怎么建立在不安全的基础之上的。</p>",
+   "start": 403.495,
+   "end": 430.534,
+   "spoken": "第二个方向是 unsafe Rust。我们这本书讲的全部是 safe Rust，编译器帮你检查一切。但有些底层操作，比如和 C 库交互、手动管理裸指针、实现某些数据结构，需要绕过编译器的检查。unsafe 关键字让你在一个受限的范围内做这些事情。学习 unsafe 不是为了到处用它，而是为了理解安全抽象是怎么建立在不安全的基础之上的。"
+  },
+  {
+   "i": 33,
+   "kind": "para",
+   "html": "<p>第三个方向是宏。Rust 的宏系统比 C 的预处理器强大得多。声明式宏让你用模式匹配生成代码，过程式宏让你在编译期操作语法树。serde 的 derive 属性、tokio 的 main 属性，背后都是过程式宏。宏是 Rust 元编程的核心工具。</p>",
+   "start": 431.084,
+   "end": 450.194,
+   "spoken": "第三个方向是宏。Rust 的宏系统比 C 的预处理器强大得多。声明式宏让你用模式匹配生成代码，过程式宏让你在编译期操作语法树。serde 的 derive 属性、tokio 的 main 属性，背后都是过程式宏。宏是 Rust 元编程的核心工具。"
+  },
+  {
+   "i": 34,
+   "kind": "para",
+   "html": "<p>第四个方向是嵌入式开发。Rust 在嵌入式领域发展迅速。没有运行时、没有垃圾回收、对硬件的精确控制，让 Rust 成为 C 在嵌入式领域的有力替代。如果你对硬件编程感兴趣，The Embedded Rust Book 是很好的起点。</p>",
+   "start": 450.744,
+   "end": 468.544,
+   "spoken": "第四个方向是嵌入式开发。Rust 在嵌入式领域发展迅速。没有运行时、没有垃圾回收、对硬件的精确控制，让 Rust 成为 C 在嵌入式领域的有力替代。如果你对硬件编程感兴趣，The Embedded Rust Book 是很好的起点。"
+  },
+  {
+   "i": 35,
+   "kind": "para",
+   "html": "<p>不管你选哪个方向，The Rust Programming Language，社区叫它 The Book，是最权威的参考。我们这本有声书讲了它最核心的内容，但很多细节和边界情况，The Book 里有更完整的覆盖。Rust by Example 用大量可运行的示例讲解概念，适合边看边练。Rustlings 是一套练习题，帮你通过修复编译错误来巩固知识。这些资源都是免费的。</p>",
+   "start": 469.094,
+   "end": 496.598,
+   "spoken": "不管你选哪个方向，The Rust Programming Language，社区叫它 The Book，是最权威的参考。我们这本有声书讲了它最核心的内容，但很多细节和边界情况，The Book 里有更完整的覆盖。Rust by Example 用大量可运行的示例讲解概念，适合边看边练。Rustlings 是一套练习题，帮你通过修复编译错误来巩固知识。这些资源都是免费的。"
+  },
+  {
+   "i": 36,
+   "kind": "heading",
+   "html": "<h2>回顾</h2>",
+   "level": 2,
+   "start": 497.148,
+   "end": 497.914,
+   "spoken": "回顾"
+  },
+  {
+   "i": 37,
+   "kind": "para",
+   "html": "<p>我们来回顾一下这整本书的脉络。</p>",
+   "start": 498.814,
+   "end": 501.45,
+   "spoken": "我们来回顾一下这整本书的脉络。"
+  },
+  {
+   "i": 38,
+   "kind": "para",
+   "html": "<p>我们从一个问题开始：内存安全和性能能不能兼得？Rust 的回答是所有权模型。每个值有一个 owner，owner 离开作用域时值被释放，这是第二章。借用让你在不转移所有权的情况下访问数据，borrow checker 确保不会出现数据竞争，这是第三章。生命周期让编译器追踪引用的有效范围，这是第四章。</p>",
+   "start": 502.0,
+   "end": 526.822,
+   "spoken": "我们从一个问题开始：内存安全和性能能不能兼得？Rust 的回答是所有权模型。每个值有一个 owner，owner 离开作用域时值被释放，这是第二章。借用让你在不转移所有权的情况下访问数据，borrow checker 确保不会出现数据竞争，这是第三章。生命周期让编译器追踪引用的有效范围，这是第四章。"
+  },
+  {
+   "i": 39,
+   "kind": "para",
+   "html": "<p>然后我们学了怎么用 Rust 来建模问题。struct 和 enum 是数据的骨架，模式匹配让编译器帮你检查逻辑分支，这是第五章。Result 和 Option 把错误变成普通的返回值，问号运算符让错误处理既安全又优雅，这是第六章。</p>",
+   "start": 527.372,
+   "end": 547.968,
+   "spoken": "然后我们学了怎么用 Rust 来建模问题。struct 和 enum 是数据的骨架，模式匹配让编译器帮你检查逻辑分支，这是第五章。Result 和 Option 把错误变成普通的返回值，问号运算符让错误处理既安全又优雅，这是第六章。"
+  },
+  {
+   "i": 40,
+   "kind": "para",
+   "html": "<p>trait 是 Rust 的行为契约，泛型加 trait bound 让你写出安全的通用代码，这是第七章。迭代器用零成本抽象处理数据流水线，这是第八章。closure 捕获环境的方式和所有权系统紧密绑定，这是第九章。</p>",
+   "start": 548.518,
+   "end": 565.708,
+   "spoken": "trait 是 Rust 的行为契约，泛型加 trait bound 让你写出安全的通用代码，这是第七章。迭代器用零成本抽象处理数据流水线，这是第八章。closure 捕获环境的方式和所有权系统紧密绑定，这是第九章。"
+  },
+  {
+   "i": 41,
+   "kind": "para",
+   "html": "<p>并发那一章，Send 和 Sync 让编译器在编译期阻止数据竞争。智能指针那一章，Box、Rc、Arc、RefCell 各自解决一个具体问题。最后这一章，我们看了 Cargo 和生态。</p>",
+   "start": 566.258,
+   "end": 581.781,
+   "spoken": "并发那一章，Send 和 Sync 让编译器在编译期阻止数据竞争。智能指针那一章，Box、Rc、Arc、RefCell 各自解决一个具体问题。最后这一章，我们看了 Cargo 和生态。"
+  },
+  {
+   "i": 42,
+   "kind": "para",
+   "html": "<p>这就是 Rust 的全貌。它不是一门容易的语言——编译器会反复拒绝你的代码，错误信息有时让人沮丧。但每一次编译器说 no，都是在帮你拦住一个本来可能在凌晨三点生产环境出现的 bug。和编译器较劲的过程，其实是你在建立对内存和并发更深刻的理解。</p>",
+   "start": 582.331,
+   "end": 603.356,
+   "spoken": "这就是 Rust 的全貌。它不是一门容易的语言——编译器会反复拒绝你的代码，错误信息有时让人沮丧。但每一次编译器说 no，都是在帮你拦住一个本来可能在凌晨三点生产环境出现的 bug。和编译器较劲的过程，其实是你在建立对内存和并发更深刻的理解。"
+  },
+  {
+   "i": 43,
+   "kind": "para",
+   "html": "<p>感谢你听完这本书。祝你写 Rust 愉快。</p>",
+   "start": 603.906,
+   "end": 607.227,
+   "spoken": "感谢你听完这本书。祝你写 Rust 愉快。"
+  }
+ ]
+}
