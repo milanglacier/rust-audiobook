@@ -36,7 +36,12 @@ uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/si
 
 ## Audiobook workflow
 
-- **Always checkpoint after writing chapters.** After drafting new or revised chapter transcripts, run `audiobook-stats`, share the results with the user, and **wait for explicit approval** before proceeding to audio synthesis (`audiobook-synth`). Synthesis costs money and cannot be undone — never skip the review step.
+- **STOP: Do NOT run `audiobook-synth` without explicit user approval.**
+  After drafting new or revised chapter transcripts:
+  1. Run `audiobook-stats` and share the results.
+  2. **STOP and wait.** Do not proceed until the user explicitly says to synthesize (e.g. "go ahead", "synth it", "approved").
+  3. Only then run `audiobook-synth`.
+  Synthesis costs real money and cannot be undone. Skipping the review step or assuming approval is never acceptable — not even if the stats show zero warnings, not even if the user said "do everything", not even if you think the chapters are obviously fine. Always wait for the explicit go-ahead.
 
 ## Version control
 

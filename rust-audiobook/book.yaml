@@ -3,7 +3,7 @@ subtitle: 一本给通勤路上听的 Rust 入门书
 author: Milan Glacier
 language: zh-Hans
 description: >
-  用十二个章节讲清楚 Rust 的所有权模型、类型系统和并发哲学，
+  用十五个章节讲清楚 Rust 的所有权模型、类型系统、并发哲学和异步编程，
   让你在通勤路上建立对 Rust 的完整直觉。
 depth: >
   机制层（深度 3）：讲清楚每个概念为什么存在、编译器怎么检查、
@@ -53,4 +53,8 @@ pronunciations:
   "CPU": "C P U"
   "GC": "G C"
   "IDE": "I D E"
+  "Future<T>": "Future T"
+  "Pin<T>": "Pin T"
+  "Poll::Ready": "Poll Ready"
+  "Poll::Pending": "Poll Pending"
   "SQL": "S Q L"

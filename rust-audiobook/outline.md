@@ -12,7 +12,7 @@
   - 知道如何用 Cargo 管理项目，找到和使用 crate
 - 语言：中文（技术术语保留英文，见术语表）
 - 深度（见 writing-guide.md §1 的四级）：第 3 级——机制层。讲清楚每个概念为什么存在、编译器的检查逻辑、常见的报错信息意味着什么。会展示关键代码片段，但不会逐行念代码。不涉及编译器内部实现或 MIR/LLVM 层面的细节。
-- 总长度：12 章，每章 10–15 分钟，总计约 2–2.5 小时
+- 总长度：15 章，每章 10–15 分钟，总计约 2.5–3.5 小时
 - 材料来源：无特定材料，基于 Rust 官方文档、The Rust Programming Language (The Book)、Rust by Example 等公开资源的理解
 
 ## 术语表
@@ -63,6 +63,17 @@
 | zero-cost abstraction | 零成本抽象 | zero-cost abstraction |
 | type inference | 类型推断 | type inference |
 | destructuring | 解构 | destructuring |
+| async | async | — |
+| await | await | — |
+| Future | Future | — |
+| poll | poll | — |
+| Pin | Pin | 防止值在内存中移动 |
+| executor / runtime | 执行器 / 运行时 | executor / runtime |
+| tokio | tokio | 最流行的异步运行时 |
+| spawn (async) | tokio::spawn | — |
+| select | select | — |
+| work-stealing | 工作窃取 | work-stealing |
+| backpressure | 背压 | backpressure |
 
 ## 章节
 
@@ -230,14 +241,46 @@
   - Rc + RefCell 组合的典型用法
 - 与前后章的衔接：上一章用了 Arc；这一章系统讲了所有智能指针；下一章是全书收尾，讲生态和实践
 
-### 12 生态与实践：从学到用
+### 13 异步：用协程驾驭并发 IO
+
+- 一句话：当并发连接数从几十增长到几万，线程模型就撑不住了——async 用协程代替线程，让一个线程交替执行成千上万个任务。
+- 听众带走的 2–4 件事：
+  1. 线程适合 CPU 密集型，async 适合 IO 密集型
+  2. Future trait 是异步的核心抽象，惰性的——创建不执行，poll 才推进
+  3. async fn 创建 Future，.await 驱动 Future，编译器把它变成状态机
+  4. Rust 标准库不提供执行器，tokio 是最流行的选择
+- 会出现的公式 / 代码 / 引文：
+  - Future trait 的定义：poll、Pin、Poll::Ready 和 Poll::Pending
+  - async fn 和 .await 的基本用法
+  - tokio::join! 并发驱动多个 Future
+  - Rc 跨越 .await 点导致非 Send 的编译错误
+- 与前后章的衔接：上一章讲了智能指针，Pin 和 Arc 都在 async 中再次出现；下一章讲 tokio 实战
+
+### 14 Tokio：异步编程实战
+
+- 一句话：tokio 是 Rust 异步生态的核心运行时——它提供任务调度、异步 IO、定时器、channel，几乎所有异步 crate 都建立在它之上。
+- 听众带走的 2–4 件事：
+  1. #[tokio::main] 启动运行时，多线程用工作窃取调度
+  2. tokio::spawn 创建轻量异步任务，比线程轻几个数量级
+  3. select! 同时等待多个 Future，先完成的先处理，其余取消
+  4. tokio 提供异步 channel（有背压）和异步 Mutex
+- 会出现的公式 / 代码 / 引文：
+  - tokio::main 宏和手动创建 Runtime 的等价写法
+  - tokio::spawn 并发抓取多个 URL 的示例
+  - select! 实现超时和优雅关闭的模式
+  - tokio::sync::mpsc 和标准库 mpsc 的区别
+  - spawn_blocking 处理阻塞操作
+  - 常见陷阱：阻塞 async 上下文、忘记 .await、递归 async 函数
+- 与前后章的衔接：上一章讲了 async 原理；这一章用 tokio 实战；下一章是全书收尾，讲生态和实践
+
+### 15 生态与实践：从学到用
 
 - 一句话：Rust 的工具链和生态是它吸引人的另一半——Cargo、crate 生态、测试、文档、以及从这本书出发你应该往哪里走。
 - 听众带走的 2–4 件事：
   1. Cargo 的核心功能：new、build、run、test、doc、publish
   2. 依赖管理和 crates.io 生态
   3. Rust 的测试框架：单元测试、集成测试、文档测试
-  4. 接下来的学习路线：async/await、unsafe、宏、嵌入式等方向
+  4. 接下来的学习路线：Web 开发、unsafe、宏、嵌入式等方向
 - 会出现的公式 / 代码 / 引文：
   - Cargo.toml 的结构
   - `#[test]` 和 `#[cfg(test)]` 的写法
