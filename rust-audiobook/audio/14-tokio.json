@@ -1,0 +1,519 @@
+{
+ "id": "14-tokio",
+ "title": "第十四章 Tokio：异步编程实战",
+ "audio": "14-tokio.mp3",
+ "duration": 592.921,
+ "language": "zh-Hans",
+ "provider": "minimax",
+ "voice": "Chinese (Mandarin)_Warm_Bestie",
+ "source_hash": "9032e40949ecfb9b883f4c47b8ccd23302994fc2ed483b7d4d123917f7bcd851",
+ "generated_at": "2026-09-20T18:45:35+00:00",
+ "segments": [
+  {
+   "i": 0,
+   "kind": "heading",
+   "html": "<h1>第十四章 Tokio：异步编程实战</h1>",
+   "level": 1,
+   "start": 0.0,
+   "end": 3.239,
+   "spoken": "第十四章 Tokio：异步编程实战"
+  },
+  {
+   "i": 1,
+   "kind": "para",
+   "html": "<p>上一章我们学了 async 和 await 的原理：Future 是惰性的，.await 驱动它，执行器负责调度。但原理本身不能帮你写出一个真正的异步程序。你需要一个运行时来管理任务调度、提供异步 IO、处理定时器和信号。tokio 就是这个运行时。</p>",
+   "start": 4.139,
+   "end": 25.381,
+   "spoken": "上一章我们学了 async 和 await 的原理：Future 是惰性的，.await 驱动它，执行器负责调度。但原理本身不能帮你写出一个真正的异步程序。你需要一个运行时来管理任务调度、提供异步 IO、处理定时器和信号。tokio 就是这个运行时。"
+  },
+  {
+   "i": 2,
+   "kind": "para",
+   "html": "<p>Rust 的异步生态绝大多数建立在 tokio 之上。axum、reqwest、tonic、sqlx——这些你在实际项目中会用到的 crate，底层都依赖 tokio。这一章讲四件事：怎么启动 tokio 运行时，怎么用 spawn 创建异步任务，怎么用 select 同时等待多个事件，以及异步编程中常见的陷阱。</p>",
+   "start": 25.931,
+   "end": 49.731,
+   "spoken": "Rust 的异步生态绝大多数建立在 tokio 之上。axum、reqwest、tonic、sqlx——这些你在实际项目中会用到的 crate，底层都依赖 tokio。这一章讲四件事：怎么启动 tokio 运行时，怎么用 spawn 创建异步任务，怎么用 select 同时等待多个事件，以及异步编程中常见的陷阱。"
+  },
+  {
+   "i": 3,
+   "kind": "heading",
+   "html": "<h2>启动 tokio</h2>",
+   "level": 2,
+   "start": 50.282,
+   "end": 51.686,
+   "spoken": "启动 tokio"
+  },
+  {
+   "i": 4,
+   "kind": "para",
+   "html": "<p>tokio 的启动方式有两种。最常见的是用 tokio 的 main 属性宏。</p>",
+   "start": 52.586,
+   "end": 57.741,
+   "spoken": "tokio 的启动方式有两种。最常见的是用 tokio 的 main 属性宏。"
+  },
+  {
+   "i": 5,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">#[tokio::main]\nasync fn main() {\n    println!(&quot;hello from tokio!&quot;);\n}\n</code></pre>",
+   "start": 57.741,
+   "end": 57.741
+  },
+  {
+   "i": 6,
+   "kind": "para",
+   "html": "<p>这个属性宏做的事情等价于：创建一个多线程运行时，然后用 block_on 驱动你的 async main。展开之后是这样的。</p>",
+   "start": 58.291,
+   "end": 67.753,
+   "spoken": "这个属性宏做的事情等价于：创建一个多线程运行时，然后用 block_on 驱动你的 async main。展开之后是这样的。"
+  },
+  {
+   "i": 7,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn main() {\n    let rt = tokio::runtime::Runtime::new().unwrap();\n    rt.block_on(async {\n        println!(&quot;hello from tokio!&quot;);\n    });\n}\n</code></pre>",
+   "start": 67.753,
+   "end": 67.753
+  },
+  {
+   "i": 8,
+   "kind": "para",
+   "html": "<p>多线程运行时默认使用和 CPU 核心数一样多的工作线程，每个线程有自己的任务队列，空闲时会从别的线程偷任务来执行。这就是工作窃取调度，英文叫 work-stealing。</p>",
+   "start": 68.303,
+   "end": 83.203,
+   "spoken": "多线程运行时默认使用和 C P U 核心数一样多的工作线程，每个线程有自己的任务队列，空闲时会从别的线程偷任务来执行。这就是工作窃取调度，英文叫 work-stealing。"
+  },
+  {
+   "i": 9,
+   "kind": "para",
+   "html": "<p>如果你只需要一个单线程运行时——比如在写一个简单的脚本——可以用 current_thread flavor。</p>",
+   "start": 83.753,
+   "end": 91.985,
+   "spoken": "如果你只需要一个单线程运行时——比如在写一个简单的脚本——可以用 current_thread flavor。"
+  },
+  {
+   "i": 10,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">#[tokio::main(flavor = &quot;current_thread&quot;)]\nasync fn main() {\n    // 只在一个线程上运行\n}\n</code></pre>",
+   "start": 91.985,
+   "end": 91.985
+  },
+  {
+   "i": 11,
+   "kind": "para",
+   "html": "<p>单线程运行时所有任务都在一个线程上轮流执行，适合不需要利用多核的场景。</p>",
+   "start": 92.535,
+   "end": 99.362,
+   "spoken": "单线程运行时所有任务都在一个线程上轮流执行，适合不需要利用多核的场景。"
+  },
+  {
+   "i": 12,
+   "kind": "para",
+   "html": "<p>在项目的 Cargo.toml 里，tokio 的依赖通常这样写。</p>",
+   "start": 99.912,
+   "end": 103.998,
+   "spoken": "在项目的 Cargo.toml 里，tokio 的依赖通常这样写。"
+  },
+  {
+   "i": 13,
+   "kind": "display",
+   "html": "<pre><code class=\"language-toml\">[dependencies]\ntokio = { version = &quot;1&quot;, features = [&quot;full&quot;] }\n</code></pre>",
+   "start": 103.998,
+   "end": 103.998
+  },
+  {
+   "i": 14,
+   "kind": "para",
+   "html": "<p>full feature 包含了 tokio 所有的功能模块。在生产项目中，你可以只启用需要的 feature 来减少编译时间，比如只用 rt 加 macros 加 net。</p>",
+   "start": 104.548,
+   "end": 116.623,
+   "spoken": "full feature 包含了 tokio 所有的功能模块。在生产项目中，你可以只启用需要的 feature 来减少编译时间，比如只用 rt 加 macros 加 net。"
+  },
+  {
+   "i": 15,
+   "kind": "para",
+   "html": "<p>所以记住：tokio main 宏是启动异步程序的标准方式。多线程运行时用工作窃取调度，适合服务器。单线程运行时适合脚本和简单场景。</p>",
+   "start": 117.173,
+   "end": 128.945,
+   "spoken": "所以记住：tokio main 宏是启动异步程序的标准方式。多线程运行时用工作窃取调度，适合服务器。单线程运行时适合脚本和简单场景。"
+  },
+  {
+   "i": 16,
+   "kind": "heading",
+   "html": "<h2>spawn：创建异步任务</h2>",
+   "level": 2,
+   "start": 129.495,
+   "end": 131.875,
+   "spoken": "spawn：创建异步任务"
+  },
+  {
+   "i": 17,
+   "kind": "para",
+   "html": "<p>在同步代码里，我们用 <code>thread::spawn</code> 创建线程。在异步代码里，对应的操作是 <code>tokio::spawn</code>。</p>",
+   "start": 132.775,
+   "end": 140.275,
+   "spoken": "在同步代码里，我们用 thread spawn 创建线程。在异步代码里，对应的操作是 tokio spawn。"
+  },
+  {
+   "i": 18,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">#[tokio::main]\nasync fn main() {\n    let handle = tokio::spawn(async {\n        &quot;hello from task&quot;\n    });\n\n    let result = handle.await.unwrap();\n    println!(&quot;{result}&quot;);\n}\n</code></pre>",
+   "start": 140.275,
+   "end": 140.275
+  },
+  {
+   "i": 19,
+   "kind": "para",
+   "html": "<p>tokio::spawn 接受一个 Future，把它放进运行时的任务队列。运行时会在合适的时候 poll 它。spawn 返回一个 JoinHandle，对它 .await 可以拿到任务的返回值。</p>",
+   "start": 140.825,
+   "end": 153.666,
+   "spoken": "tokiospawn 接受一个 Future，把它放进运行时的任务队列。运行时会在合适的时候 poll 它。spawn 返回一个 JoinHandle，对它 .await 可以拿到任务的返回值。"
+  },
+  {
+   "i": 20,
+   "kind": "para",
+   "html": "<p>和 thread::spawn 的一个重要区别：tokio::spawn 创建的任务非常轻量。一个线程通常占用几兆字节的栈空间，但一个 tokio 任务只需要几百字节。创建一万个线程可能会耗尽内存，但创建一万个 tokio 任务毫无压力。</p>",
+   "start": 154.216,
+   "end": 170.76,
+   "spoken": "和 threadspawn 的一个重要区别：tokiospawn 创建的任务非常轻量。一个线程通常占用几兆字节的栈空间，但一个 tokio 任务只需要几百字节。创建一万个线程可能会耗尽内存，但创建一万个 tokio 任务毫无压力。"
+  },
+  {
+   "i": 21,
+   "kind": "para",
+   "html": "<p>我们来看一个更实际的例子：并发地从多个 URL 抓取数据。</p>",
+   "start": 171.31,
+   "end": 176.384,
+   "spoken": "我们来看一个更实际的例子：并发地从多个 URL 抓取数据。"
+  },
+  {
+   "i": 22,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">#[tokio::main]\nasync fn main() {\n    let urls = vec![\n        &quot;https://example.com/1&quot;,\n        &quot;https://example.com/2&quot;,\n        &quot;https://example.com/3&quot;,\n    ];\n\n    let mut handles = vec![];\n\n    for url in urls {\n        let handle = tokio::spawn(async move {\n            let resp = reqwest::get(url).await.unwrap();\n            resp.text().await.unwrap()\n        });\n        handles.push(handle);\n    }\n\n    for handle in handles {\n        let body = handle.await.unwrap();\n        println!(&quot;收到 {} 字节&quot;, body.len());\n    }\n}\n</code></pre>",
+   "start": 176.384,
+   "end": 176.384
+  },
+  {
+   "i": 23,
+   "kind": "para",
+   "html": "<p>每个 URL 的请求是一个独立的任务，它们并发执行。注意 async move：和线程一样，spawn 的 Future 必须拥有它使用的数据的所有权。</p>",
+   "start": 176.934,
+   "end": 188.486,
+   "spoken": "每个 URL 的请求是一个独立的任务，它们并发执行。注意 async move：和线程一样，spawn 的 Future 必须拥有它使用的数据的所有权。"
+  },
+  {
+   "i": 24,
+   "kind": "para",
+   "html": "<p>tokio::spawn 要求 Future 满足两个条件：Send 加 'static。Send 是因为多线程运行时可能在任意线程上执行任务。'static 是因为 spawn 出去的任务可能活得比创建它的函数更久，不能持有短生命周期的引用。这和 thread::spawn 的要求完全一致。</p>",
+   "start": 189.036,
+   "end": 209.604,
+   "spoken": "tokiospawn 要求 Future 满足两个条件：Send 加 static 生命周期。Send 是因为多线程运行时可能在任意线程上执行任务。static 生命周期 是因为 spawn 出去的任务可能活得比创建它的函数更久，不能持有短生命周期的引用。这和 threadspawn 的要求完全一致。"
+  },
+  {
+   "i": 25,
+   "kind": "para",
+   "html": "<p>所以记住：tokio::spawn 是异步世界的 thread::spawn。任务比线程轻量几个数量级，但同样要求 Send 加 'static。</p>",
+   "start": 210.154,
+   "end": 220.354,
+   "spoken": "所以记住：tokiospawn 是异步世界的 threadspawn。任务比线程轻量几个数量级，但同样要求 Send 加 static 生命周期。"
+  },
+  {
+   "i": 26,
+   "kind": "heading",
+   "html": "<h2>select!：等待多个事件</h2>",
+   "level": 2,
+   "start": 220.904,
+   "end": 223.412,
+   "spoken": "select!：等待多个事件"
+  },
+  {
+   "i": 27,
+   "kind": "para",
+   "html": "<p>在实际的异步程序中，你经常需要同时等待多个事件：一条来自客户端的消息、一个超时信号、一个关闭通知。哪个先到就处理哪个。tokio 的 <code>select!</code> 做的就是这件事。</p>",
+   "start": 224.312,
+   "end": 238.221,
+   "spoken": "在实际的异步程序中，你经常需要同时等待多个事件：一条来自客户端的消息、一个超时信号、一个关闭通知。哪个先到就处理哪个。tokio 的 select 宏 做的就是这件事。"
+  },
+  {
+   "i": 28,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use tokio::time::{sleep, Duration};\n\n#[tokio::main]\nasync fn main() {\n    let result = tokio::select! {\n        val = fetch_data(&quot;https://example.com&quot;) =&gt; {\n            format!(&quot;收到数据: {val}&quot;)\n        }\n        _ = sleep(Duration::from_secs(5)) =&gt; {\n            &quot;超时了&quot;.to_string()\n        }\n    };\n    println!(&quot;{result}&quot;);\n}\n</code></pre>",
+   "start": 238.221,
+   "end": 238.221
+  },
+  {
+   "i": 29,
+   "kind": "para",
+   "html": "<p>select 同时驱动两个 Future：一个网络请求和一个五秒的定时器。哪个先完成，就执行对应的分支，另一个被取消。这就是一个超时模式：请求在五秒内完成就拿到数据，超过五秒就返回超时。</p>",
+   "start": 238.771,
+   "end": 254.769,
+   "spoken": "select 同时驱动两个 Future：一个网络请求和一个五秒的定时器。哪个先完成，就执行对应的分支，另一个被取消。这就是一个超时模式：请求在五秒内完成就拿到数据，超过五秒就返回超时。"
+  },
+  {
+   "i": 30,
+   "kind": "para",
+   "html": "<p>被取消的 Future 会被 drop。它持有的资源会被释放，正在进行的 IO 操作会被中断。Rust 的取消就是 drop——不需要额外的取消 API，这是所有权系统的又一个好处。</p>",
+   "start": 255.319,
+   "end": 269.646,
+   "spoken": "被取消的 Future 会被 drop。它持有的资源会被释放，正在进行的 IO 操作会被中断。Rust 的取消就是 drop——不需要额外的取消 A P I，这是所有权系统的又一个好处。"
+  },
+  {
+   "i": 31,
+   "kind": "para",
+   "html": "<p>select 还有一个常见用法：在循环里持续监听多个事件源。</p>",
+   "start": 270.196,
+   "end": 275.862,
+   "spoken": "select 还有一个常见用法：在循环里持续监听多个事件源。"
+  },
+  {
+   "i": 32,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use tokio::sync::mpsc;\nuse tokio::signal;\n\nasync fn run(mut rx: mpsc::Receiver&lt;String&gt;) {\n    loop {\n        tokio::select! {\n            Some(msg) = rx.recv() =&gt; {\n                println!(&quot;处理消息: {msg}&quot;);\n            }\n            _ = signal::ctrl_c() =&gt; {\n                println!(&quot;收到关闭信号，退出&quot;);\n                break;\n            }\n        }\n    }\n}\n</code></pre>",
+   "start": 275.862,
+   "end": 275.862
+  },
+  {
+   "i": 33,
+   "kind": "para",
+   "html": "<p>这个循环同时等待两件事：channel 里的新消息和 Ctrl-C 信号。收到消息就处理，收到 Ctrl-C 就退出。这种模式在服务端程序里非常常见。</p>",
+   "start": 276.412,
+   "end": 288.393,
+   "spoken": "这个循环同时等待两件事：channel 里的新消息和 Ctrl-C 信号。收到消息就处理，收到 Ctrl-C 就退出。这种模式在服务端程序里非常常见。"
+  },
+  {
+   "i": 34,
+   "kind": "para",
+   "html": "<p>所以记住：select 让你同时等待多个 Future，先完成的先处理，其余的被取消。超时、关闭信号、多路复用，都靠 select。</p>",
+   "start": 288.943,
+   "end": 301.656,
+   "spoken": "所以记住：select 让你同时等待多个 Future，先完成的先处理，其余的被取消。超时、关闭信号、多路复用，都靠 select。"
+  },
+  {
+   "i": 35,
+   "kind": "heading",
+   "html": "<h2>异步 channel 和同步原语</h2>",
+   "level": 2,
+   "start": 302.206,
+   "end": 304.076,
+   "spoken": "异步 channel 和同步原语"
+  },
+  {
+   "i": 36,
+   "kind": "para",
+   "html": "<p>第十章我们学了标准库的 mpsc channel。tokio 提供了异步版本，发送和接收都可以在 .await 点暂停而不阻塞线程。</p>",
+   "start": 304.976,
+   "end": 315.297,
+   "spoken": "第十章我们学了标准库的 mpsc channel。tokio 提供了异步版本，发送和接收都可以在 .await 点暂停而不阻塞线程。"
+  },
+  {
+   "i": 37,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use tokio::sync::mpsc;\n\n#[tokio::main]\nasync fn main() {\n    let (tx, mut rx) = mpsc::channel(32);\n\n    tokio::spawn(async move {\n        for i in 0..5 {\n            tx.send(format!(&quot;消息 {i}&quot;)).await.unwrap();\n        }\n    });\n\n    while let Some(msg) = rx.recv().await {\n        println!(&quot;收到: {msg}&quot;);\n    }\n}\n</code></pre>",
+   "start": 315.297,
+   "end": 315.297
+  },
+  {
+   "i": 38,
+   "kind": "para",
+   "html": "<p>注意一个关键区别：标准库的 <code>mpsc::channel</code> 是无界的，发送者可以无限地往里塞消息。tokio 的 mpsc::channel 需要指定缓冲区大小，这里是 32。当缓冲区满了，send 会暂停等待，直到接收方取走一条消息。这是背压机制——发送方不能无限地生产，必须等接收方跟上节奏。</p>",
+   "start": 315.847,
+   "end": 340.421,
+   "spoken": "注意一个关键区别：标准库的 m p s c channel 是无界的，发送者可以无限地往里塞消息。tokio 的 mpscchannel 需要指定缓冲区大小，这里是 32。当缓冲区满了，send 会暂停等待，直到接收方取走一条消息。这是背压机制——发送方不能无限地生产，必须等接收方跟上节奏。"
+  },
+  {
+   "i": 39,
+   "kind": "para",
+   "html": "<p>tokio 还提供了 oneshot channel：一个发送者发一条消息，一个接收者收一条消息。常用于异步函数之间传递一次性结果，比如一个任务算完了把结果发回给请求方。</p>",
+   "start": 340.971,
+   "end": 354.961,
+   "spoken": "tokio 还提供了 oneshot channel：一个发送者发一条消息，一个接收者收一条消息。常用于异步函数之间传递一次性结果，比如一个任务算完了把结果发回给请求方。"
+  },
+  {
+   "i": 40,
+   "kind": "para",
+   "html": "<p>tokio 也有异步的 Mutex。和标准库的 Mutex 不同，tokio 的 Mutex 在等待锁的时候不会阻塞线程，而是暂停当前任务，让运行时去执行别的任务。</p>",
+   "start": 355.511,
+   "end": 367.585,
+   "spoken": "tokio 也有异步的 Mutex。和标准库的 Mutex 不同，tokio 的 Mutex 在等待锁的时候不会阻塞线程，而是暂停当前任务，让运行时去执行别的任务。"
+  },
+  {
+   "i": 41,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::sync::Arc;\nuse tokio::sync::Mutex;\n\n#[tokio::main]\nasync fn main() {\n    let data = Arc::new(Mutex::new(vec![]));\n\n    let mut handles = vec![];\n    for i in 0..5 {\n        let data = Arc::clone(&amp;data);\n        handles.push(tokio::spawn(async move {\n            let mut lock = data.lock().await;\n            lock.push(i);\n        }));\n    }\n\n    for h in handles { h.await.unwrap(); }\n    println!(&quot;{:?}&quot;, *data.lock().await);\n}\n</code></pre>",
+   "start": 367.585,
+   "end": 367.585
+  },
+  {
+   "i": 42,
+   "kind": "para",
+   "html": "<p>不过 tokio 的文档有一个建议：如果锁的持有时间很短，而且不跨越 .await 点，标准库的 Mutex 通常更快。tokio 的 Mutex 的优势在于你可以在持有锁的时候 .await。标准库的 Mutex 在异步上下文中如果持有锁的同时 .await，可能会阻塞整个工作线程。</p>",
+   "start": 368.135,
+   "end": 388.383,
+   "spoken": "不过 tokio 的文档有一个建议：如果锁的持有时间很短，而且不跨越 .await 点，标准库的 Mutex 通常更快。tokio 的 Mutex 的优势在于你可以在持有锁的时候 .await。标准库的 Mutex 在异步上下文中如果持有锁的同时 .await，可能会阻塞整个工作线程。"
+  },
+  {
+   "i": 43,
+   "kind": "para",
+   "html": "<p>所以记住：tokio 提供了异步版本的 channel 和 Mutex。异步 mpsc 有缓冲区限制，提供背压。选择标准库还是 tokio 的同步原语，取决于你是否需要在持有锁的时候 .await。</p>",
+   "start": 388.933,
+   "end": 404.293,
+   "spoken": "所以记住：tokio 提供了异步版本的 channel 和 Mutex。异步 mpsc 有缓冲区限制，提供背压。选择标准库还是 tokio 的同步原语，取决于你是否需要在持有锁的时候 .await。"
+  },
+  {
+   "i": 44,
+   "kind": "heading",
+   "html": "<h2>常见陷阱</h2>",
+   "level": 2,
+   "start": 404.843,
+   "end": 405.993,
+   "spoken": "常见陷阱"
+  },
+  {
+   "i": 45,
+   "kind": "para",
+   "html": "<p>异步编程有几个新手容易踩的坑。这里讲最常见的三个。</p>",
+   "start": 406.892,
+   "end": 411.792,
+   "spoken": "异步编程有几个新手容易踩的坑。这里讲最常见的三个。"
+  },
+  {
+   "i": 46,
+   "kind": "para",
+   "html": "<p>第一个坑：在 async 代码里调用阻塞操作。如果你在一个 tokio 任务里调用了 <code>std::thread::sleep</code> 或者同步的文件读取，这个操作会阻塞整个工作线程。tokio 的调度器在阻塞期间没法运行其他任务，这就违背了 async 的初衷。</p>",
+   "start": 412.342,
+   "end": 433.24,
+   "spoken": "第一个坑：在 async 代码里调用阻塞操作。如果你在一个 tokio 任务里调用了 std thread sleep 或者同步的文件读取，这个操作会阻塞整个工作线程。tokio 的调度器在阻塞期间没法运行其他任务，这就违背了 async 的初衷。"
+  },
+  {
+   "i": 47,
+   "kind": "para",
+   "html": "<p>解决方案是用 tokio 提供的异步替代品：用 <code>tokio::time::sleep</code> 代替 std::thread::sleep，用 <code>tokio::fs</code> 代替 std::fs。如果你必须调用一个阻塞的 API——比如一个只有同步接口的第三方库——用 <code>tokio::task::spawn_blocking</code> 把它放到专门的阻塞线程池里。</p>",
+   "start": 433.79,
+   "end": 455.118,
+   "spoken": "解决方案是用 tokio 提供的异步替代品：用 tokio time sleep 代替 stdthreadsleep，用 tokio f s 代替 stdfs。如果你必须调用一个阻塞的 A P I——比如一个只有同步接口的第三方库——用 tokio task spawn blocking 把它放到专门的阻塞线程池里。"
+  },
+  {
+   "i": 48,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">let result = tokio::task::spawn_blocking(|| {\n    std::fs::read_to_string(&quot;big_file.txt&quot;)\n}).await.unwrap();\n</code></pre>",
+   "start": 455.118,
+   "end": 455.118
+  },
+  {
+   "i": 49,
+   "kind": "para",
+   "html": "<p>spawn_blocking 会在一个独立的线程池上运行阻塞操作，不会影响 tokio 的异步工作线程。</p>",
+   "start": 455.668,
+   "end": 462.912,
+   "spoken": "spawn_blocking 会在一个独立的线程池上运行阻塞操作，不会影响 tokio 的异步工作线程。"
+  },
+  {
+   "i": 50,
+   "kind": "para",
+   "html": "<p>第二个坑：忘记 .await。调用一个 async 函数但不 .await 它，这个函数根本不会执行。编译器会给一个 warning 说 Future 没有被使用，但如果你忽略了这个 warning，bug 就很难找。</p>",
+   "start": 463.462,
+   "end": 480.262,
+   "spoken": "第二个坑：忘记 .await。调用一个 async 函数但不 .await 它，这个函数根本不会执行。编译器会给一个 warning 说 Future 没有被使用，但如果你忽略了这个 warning，bug 就很难找。"
+  },
+  {
+   "i": 51,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">async fn save_to_db(data: &amp;str) { /* ... */ }\n\nasync fn process() {\n    save_to_db(&quot;important&quot;);  // 忘了 .await！这行什么都没做\n    // 应该写 save_to_db(&quot;important&quot;).await;\n}\n</code></pre>",
+   "start": 480.262,
+   "end": 480.262
+  },
+  {
+   "i": 52,
+   "kind": "para",
+   "html": "<p>这是 Future 惰性的直接后果。不 poll 就不执行，不 .await 就不 poll。</p>",
+   "start": 480.812,
+   "end": 487.337,
+   "spoken": "这是 Future 惰性的直接后果。不 poll 就不执行，不 .await 就不 poll。"
+  },
+  {
+   "i": 53,
+   "kind": "para",
+   "html": "<p>第三个坑：递归的 async 函数。async 函数的返回类型是编译器自动生成的 Future 类型。如果函数递归调用自己，这个 Future 类型在编译期的大小就变成无限的。编译器会拒绝。解决方案是用 <code>Box::pin</code> 把递归调用包装起来，把 Future 放到堆上。</p>",
+   "start": 487.887,
+   "end": 508.309,
+   "spoken": "第三个坑：递归的 async 函数。async 函数的返回类型是编译器自动生成的 Future 类型。如果函数递归调用自己，这个 Future 类型在编译期的大小就变成无限的。编译器会拒绝。解决方案是用 Box pin 把递归调用包装起来，把 Future 放到堆上。"
+  },
+  {
+   "i": 54,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">use std::pin::Pin;\nuse std::future::Future;\n\nfn traverse(node: Node) -&gt; Pin&lt;Box&lt;dyn Future&lt;Output = ()&gt; + Send&gt;&gt; {\n    Box::pin(async move {\n        process(&amp;node).await;\n        for child in node.children {\n            traverse(child).await;\n        }\n    })\n}\n</code></pre>",
+   "start": 508.309,
+   "end": 508.309
+  },
+  {
+   "i": 55,
+   "kind": "para",
+   "html": "<p>这种场景不常见，但遇到了要知道怎么解决。</p>",
+   "start": 508.859,
+   "end": 512.481,
+   "spoken": "这种场景不常见，但遇到了要知道怎么解决。"
+  },
+  {
+   "i": 56,
+   "kind": "para",
+   "html": "<p>所以记住：不要在 async 上下文中调用阻塞操作，用异步替代品或 spawn_blocking。不要忘记 .await，否则 Future 不会执行。递归 async 函数需要用 Box::pin 包装。</p>",
+   "start": 513.031,
+   "end": 527.102,
+   "spoken": "所以记住：不要在 async 上下文中调用阻塞操作，用异步替代品或 spawn_blocking。不要忘记 .await，否则 Future 不会执行。递归 async 函数需要用 Boxpin 包装。"
+  },
+  {
+   "i": 57,
+   "kind": "heading",
+   "html": "<h2>回顾</h2>",
+   "level": 2,
+   "start": 527.652,
+   "end": 528.419,
+   "spoken": "回顾"
+  },
+  {
+   "i": 58,
+   "kind": "para",
+   "html": "<p>这一章我们用 tokio 实际写了异步代码。</p>",
+   "start": 529.319,
+   "end": 532.558,
+   "spoken": "这一章我们用 tokio 实际写了异步代码。"
+  },
+  {
+   "i": 59,
+   "kind": "para",
+   "html": "<p>第一，tokio main 宏是启动异步程序的入口。多线程运行时用工作窃取调度，适合高并发场景。单线程运行时适合简单脚本。</p>",
+   "start": 533.108,
+   "end": 544.242,
+   "spoken": "第一，tokio main 宏是启动异步程序的入口。多线程运行时用工作窃取调度，适合高并发场景。单线程运行时适合简单脚本。"
+  },
+  {
+   "i": 60,
+   "kind": "para",
+   "html": "<p>第二，tokio::spawn 创建轻量的异步任务。一万个任务的开销远小于一万个线程。和 thread::spawn 一样，要求 Send 加 'static。</p>",
+   "start": 544.792,
+   "end": 555.113,
+   "spoken": "第二，tokiospawn 创建轻量的异步任务。一万个任务的开销远小于一万个线程。和 threadspawn 一样，要求 Send 加 static 生命周期。"
+  },
+  {
+   "i": 61,
+   "kind": "para",
+   "html": "<p>第三，select 同时等待多个 Future，先完成的先处理，其余取消。超时、关闭信号、多路复用，都靠 select。</p>",
+   "start": 555.663,
+   "end": 565.81,
+   "spoken": "第三，select 同时等待多个 Future，先完成的先处理，其余取消。超时、关闭信号、多路复用，都靠 select。"
+  },
+  {
+   "i": 62,
+   "kind": "para",
+   "html": "<p>第四，tokio 提供了异步版本的 channel 和 Mutex。异步 mpsc 有背压机制。标准库和 tokio 的同步原语各有适用场景。</p>",
+   "start": 566.36,
+   "end": 576.171,
+   "spoken": "第四，tokio 提供了异步版本的 channel 和 Mutex。异步 mpsc 有背压机制。标准库和 tokio 的同步原语各有适用场景。"
+  },
+  {
+   "i": 63,
+   "kind": "para",
+   "html": "<p>下一章是这本书的最后一章。我们会把目光从语言本身移开，看看 Rust 的工具链和生态——Cargo 怎么管理项目，社区有哪些值得了解的 crate，以及从这本书出发你应该往哪些方向继续深入。</p>",
+   "start": 576.721,
+   "end": 592.371,
+   "spoken": "下一章是这本书的最后一章。我们会把目光从语言本身移开，看看 Rust 的工具链和生态——Cargo 怎么管理项目，社区有哪些值得了解的 crate，以及从这本书出发你应该往哪些方向继续深入。"
+  }
+ ]
+}

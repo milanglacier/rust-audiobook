@@ -2,12 +2,12 @@
  "id": "11-smart-pointers",
  "title": "第十一章 智能指针：超越引用",
  "audio": "11-smart-pointers.mp3",
- "duration": 597.281,
- "language": "zh",
+ "duration": 598.651,
+ "language": "zh-Hans",
  "provider": "minimax",
  "voice": "Chinese (Mandarin)_Warm_Bestie",
- "source_hash": "6e53dc8f02a63016b3018ad49165b5e357ba2e7bdd7d698e81cf71205e9a2c8a",
- "generated_at": "2026-09-20T04:50:08+00:00",
+ "source_hash": "de1464a38401dc48f59c1f21c250ef06009c92a278268504829a2aafda2103ae",
+ "generated_at": "2026-09-20T18:44:23+00:00",
  "segments": [
   {
    "i": 0,
@@ -435,10 +435,10 @@
   {
    "i": 53,
    "kind": "para",
-   "html": "<p>下一章是这本书的最后一章。我们会把目光从语言本身移开，看看 Rust 的工具链和生态——Cargo 怎么管理项目，社区有哪些值得了解的 crate，以及从这本书出发你应该往哪里走。</p>",
+   "html": "<p>下一章我们讲异步编程。这一章里出现的 Arc 在异步代码中同样不可或缺，Pin 则是 Future trait 的核心组成部分。我们会看到 async 和 await 如何用协程代替线程来处理大量并发 IO。</p>",
    "start": 581.847,
-   "end": 596.731,
-   "spoken": "下一章是这本书的最后一章。我们会把目光从语言本身移开，看看 Rust 的工具链和生态——Cargo 怎么管理项目，社区有哪些值得了解的 crate，以及从这本书出发你应该往哪里走。"
+   "end": 598.101,
+   "spoken": "下一章我们讲异步编程。这一章里出现的 Arc 在异步代码中同样不可或缺，Pin 则是 Future trait 的核心组成部分。我们会看到 async 和 await 如何用协程代替线程来处理大量并发 IO。"
   }
  ]
 }

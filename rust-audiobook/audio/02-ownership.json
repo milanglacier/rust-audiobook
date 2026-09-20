@@ -3,11 +3,11 @@
  "title": "第二章 所有权：每个值只有一个主人",
  "audio": "02-ownership.mp3",
  "duration": 596.946,
- "language": "zh",
+ "language": "zh-Hans",
  "provider": "minimax",
  "voice": "Chinese (Mandarin)_Warm_Bestie",
- "source_hash": "5af7c9bd5c7cef75dc0cad583d2e567ba90be98b26a3bf367fdbdd81759f9c02",
- "generated_at": "2026-09-20T04:46:04+00:00",
+ "source_hash": "df157b3a7261faf9406f88e496108b9aba3529e6842a84688253a3780061556a",
+ "generated_at": "2026-09-20T18:43:30+00:00",
  "segments": [
   {
    "i": 0,

@@ -3,11 +3,11 @@
  "title": "第八章 迭代器与集合：数据的流水线",
  "audio": "08-iterators.mp3",
  "duration": 489.334,
- "language": "zh",
+ "language": "zh-Hans",
  "provider": "minimax",
  "voice": "Chinese (Mandarin)_Warm_Bestie",
- "source_hash": "6e215fce5a027095701029c3cd0c32bd8aa8fe0e7d0e9e40d9d93cd40086637d",
- "generated_at": "2026-09-20T04:47:09+00:00",
+ "source_hash": "c5dc3b0666d6cef372e6b300c4a4680f1349c38f71908b9ae51604866c5b1d37",
+ "generated_at": "2026-09-20T18:44:01+00:00",
  "segments": [
   {
    "i": 0,
