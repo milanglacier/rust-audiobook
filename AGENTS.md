@@ -43,3 +43,10 @@ uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/si
 - `.env` is gitignored (contains API keys).
 - `.cache/tts/` is gitignored (local paragraph-level TTS cache, keyed by voice+text).
 - `audio/` and `site/` are tracked — synthesis costs money and the site is the final deliverable.
+
+## Deploying to Vercel
+
+Config is `vercel.json` + `.vercelignore` at the repo root. Two things those files don't tell you:
+
+- `site/` is ~77 MB of mp3, and the Vercel **CLI** source-upload cap is 100 MB on Hobby (1 GB on Pro). A few more chapters will break `vercel deploy`; Git-based deployments don't go through that upload path.
+- Do **not** add a SPA rewrite to `index.html`. The player is hash-routed (`#/`), so every route is already the one real `index.html`; a catch-all rewrite would only mask 404s on missing audio/JSON.

@@ -1,0 +1,12 @@
+# Only rust-audiobook/site is deployed (see outputDirectory in vercel.json).
+# Everything else is source material or tooling — keep it out of the upload.
+.agents/
+.claude/
+.env
+AGENTS.md
+CLAUDE.md
+rust-audiobook/.cache/
+rust-audiobook/chapters/
+rust-audiobook/audio/
+rust-audiobook/outline.md
+rust-audiobook/book.yaml
