@@ -1,0 +1,58 @@
+title: 听懂 Rust：从零开始的所有权之旅
+subtitle: 一本给通勤路上听的 Rust 入门书
+author: Milan Glacier
+language: zh
+description: >
+  用十二个章节讲清楚 Rust 的所有权模型、类型系统和并发哲学，
+  让你在通勤路上建立对 Rust 的完整直觉。
+depth: >
+  机制层（深度 3）：讲清楚每个概念为什么存在、编译器怎么检查、
+  代码怎么写，但不涉及编译器内部实现或语言规范细节。
+tts:
+  provider: azure
+  voice: zh-CN-YunxiNeural
+  speed: 1.0
+  format: mp3
+  loudnorm: true
+  instructions: >
+    沉稳、清晰、不急不缓的讲解者。像一个有经验的朋友在白板前给你讲 Rust，
+    节奏自然。中英文混读时英文单词自然带过，不要刻意加重。
+  pause_ms:
+    paragraph: 550
+    heading: 900
+    line: 250
+    rule: 1500
+pronunciations:
+  "Vec<T>": "Vec T"
+  "Option<T>": "Option T"
+  "Result<T, E>": "Result T E"
+  "Box<T>": "Box T"
+  "Rc<T>": "Rc T"
+  "Arc<T>": "Arc T"
+  "RefCell<T>": "RefCell T"
+  "HashMap<K, V>": "HashMap K V"
+  "&T": "对 T 的引用"
+  "&mut T": "对 T 的可变引用"
+  "Fn": "F n"
+  "FnMut": "F n Mut"
+  "FnOnce": "F n Once"
+  "impl": "impl"
+  "fn": "f n"
+  "println!": "print l n 宏"
+  "unwrap()": "unwrap"
+  "?": "问号运算符"
+  "::": ""
+  "->": "返回"
+  "=>": "映射到"
+  "Send": "Send"
+  "Sync": "Sync"
+  "Mutex<T>": "Mutex T"
+  "'a": "生命周期 a"
+  "'static": "static 生命周期"
+  "RAII": "R A I I"
+  "API": "A P I"
+  "CLI": "C L I"
+  "CPU": "C P U"
+  "GC": "G C"
+  "IDE": "I D E"
+  "SQL": "S Q L"
