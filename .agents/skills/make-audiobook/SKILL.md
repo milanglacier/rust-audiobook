@@ -146,6 +146,13 @@ supports HTTP range requests (iOS Safari needs them for seeking) and prints
 every LAN address it is reachable on; give the user those URLs. It runs until
 Ctrl-C, so start it in the background when you need to keep working.
 
+`site/index.html` is build output: the player comes from `assets/site/`, and
+its `<head>` — title, `<html lang>`, description, `og:` tags — is filled in
+from `book.yaml`. Link unfurlers and most crawlers read the page without
+running the player's JS, so the book's identity has to be in the markup. The
+book's metadata therefore lives in `book.yaml`; every build rewrites the copy
+under `site/`.
+
 The player is a single page: an index with the chapter list, progress and a
 "continue" button; a chapter view with the transcript, the current paragraph
 highlighted and kept in view, tap-to-seek, a sticky bar with play/pause,

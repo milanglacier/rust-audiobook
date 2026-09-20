@@ -40,8 +40,8 @@ generated audio file names are portable.
 title: 扩散模型：从加噪到生成
 subtitle: 一本给通勤路上听的入门书          # optional
 author: Milan Glacier                      # optional, shown on the index page
-language: zh                               # zh | en — the primary narration language
-description: >                              # shown on the index page
+language: zh-Hans                          # BCP-47 tag; narration language and <html lang>
+description: >                              # index page, and the page's meta description
   用十个章节讲清楚 diffusion model 的直觉、数学骨架和工程取舍。
 depth: >                                    # the depth contract agreed in outline.md, kept
   直觉 + 主干公式（forward/reverse process, ELBO 的简化形式），不做完整推导。
@@ -68,6 +68,11 @@ pronunciations:             # optional: spoken replacements applied to every cha
 Only `title` and `language` are required. `tts.*` can also be overridden per
 chapter in the chapter's frontmatter (for example a different voice for a
 chapter that is mostly poetry).
+
+`language` takes any BCP-47 tag (`zh`, `zh-Hans`, `en`, `en-US`). It is emitted
+verbatim as the page's `<html lang>`, so prefer the precise tag; a tag starting
+with `zh` also selects the player's Chinese UI strings, anything else gets the
+English ones.
 
 ## Chapter files
 

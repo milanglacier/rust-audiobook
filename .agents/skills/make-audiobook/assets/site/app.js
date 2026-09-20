@@ -175,7 +175,8 @@
     chapters = Array.isArray(book.chapters) ? book.chapters : [];
     lang = /^zh/i.test(book.language || '') ? 'zh' : 'en';
     T = STR[lang];
-    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
+    // the book's own tag wins; `lang` is only the UI-string bucket (zh or en)
+    document.documentElement.lang = book.language || (lang === 'zh' ? 'zh-Hans' : 'en');
     document.title = book.title || 'Audiobook';
     NS = String(book.title || 'book').slice(0, 80);
 

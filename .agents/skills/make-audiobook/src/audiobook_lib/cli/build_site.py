@@ -10,8 +10,10 @@ can be reviewed in the player before any money is spent.
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
+import re
 import shutil
 from datetime import datetime, timezone
 from importlib.resources import files as resource_files
@@ -84,6 +86,63 @@ def copy_assets(assets: Path, out: Path) -> bool:
     return (out / "index.html").exists()
 
 
+def esc(value: object) -> str:
+    return html.escape(str(value), quote=True)
+
+
+def render_index(text: str, book: Book) -> str:
+    """Bake the book's identity into <head> at build time.
+
+    The player sets `document.title` and `<html lang>` from book.json once it
+    runs, but link unfurlers (Slack, WeChat, iMessage, Telegram) and most
+    crawlers never execute JS — the markup is all they ever see. Tags the asset
+    already defines are left alone, so a custom `--site-assets` page keeps its
+    own head.
+    """
+    lang = book.language or "en"
+    title = book.title or "Audiobook"
+    desc = " ".join((book.description or book.subtitle or "").split())
+
+    if re.search(r"<html\b[^>]*\blang=", text, re.I):
+        text = re.sub(
+            r'(<html\b[^>]*\blang=")[^"]*(")',
+            lambda m: m.group(1) + esc(lang) + m.group(2), text, count=1, flags=re.I,
+        )
+    else:
+        text = re.sub(r"<html\b", lambda m: f'<html lang="{esc(lang)}"', text, count=1, flags=re.I)
+
+    extra: list[str] = []
+    if re.search(r"<title>", text, re.I):
+        text = re.sub(
+            r"<title>.*?</title>", lambda m: f"<title>{esc(title)}</title>",
+            text, count=1, flags=re.I | re.S,
+        )
+    else:
+        extra.append(f"<title>{esc(title)}</title>")
+
+    taken = {m.lower() for m in re.findall(r'<meta\s+(?:name|property)="([^"]+)"', text, re.I)}
+    wanted = (
+        ("name", "description", desc),
+        ("name", "author", book.author),
+        ("property", "og:type", "website"),
+        ("property", "og:title", title),
+        ("property", "og:description", desc),
+        ("name", "twitter:card", "summary"),
+    )
+    extra += [
+        f'<meta {kind}="{key}" content="{esc(value)}">'
+        for kind, key, value in wanted
+        if value and key not in taken
+    ]
+    if not extra:
+        return text
+
+    block = "\n".join(extra)
+    if re.search(r"</head>", text, re.I):
+        return re.sub(r"</head>", lambda m: block + "\n</head>", text, count=1, flags=re.I)
+    return block + "\n" + text
+
+
 def link_or_copy(src: Path, dest: Path) -> None:
     """Hardlink when possible — a book is hundreds of MB of audio."""
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -127,7 +186,10 @@ def main() -> int:
     (out / "chapters").mkdir(exist_ok=True)
 
     have_assets = copy_assets(assets, out)
-    if not have_assets:
+    if have_assets:
+        index = out / "index.html"
+        index.write_text(render_index(index.read_text("utf-8"), book), encoding="utf-8")
+    else:
         print(f"notice: no player assets in {assets} — writing a placeholder index.html")
 
     chapters_meta: list[dict[str, Any]] = []

@@ -1,7 +1,7 @@
 title: 听懂 Rust：从零开始的所有权之旅
 subtitle: 一本给通勤路上听的 Rust 入门书
 author: Milan Glacier
-language: zh
+language: zh-Hans
 description: >
   用十二个章节讲清楚 Rust 的所有权模型、类型系统和并发哲学，
   让你在通勤路上建立对 Rust 的完整直觉。

@@ -140,6 +140,37 @@ def test_build_site_works_before_any_audio(monkeypatch, book_dir):
     assert all(c["audio"] is None for c in book_json["chapters"])
 
 
+def test_build_site_bakes_metadata_into_index(monkeypatch, book_dir):
+    """Unfurlers and crawlers never run app.js — the head must be real markup."""
+    assert run(monkeypatch, build_site.main, str(book_dir)) == 0
+    index = (book_dir / "site" / "index.html").read_text("utf-8")
+    assert "<title>测试书</title>" in index
+    assert '<html lang="zh">' in index
+    assert '<meta name="description" content="用来测试整条流水线。">' in index
+    assert '<meta property="og:title" content="测试书">' in index
+    assert '<meta name="author" content="测试">' in index
+    assert index.count("<title>") == 1
+
+
+def test_build_site_is_not_hardcoded_to_chinese(monkeypatch, tmp_path):
+    book = tmp_path / "en-book"
+    (book / "chapters").mkdir(parents=True)
+    (book / "book.yaml").write_text(
+        'title: A Test Book\nauthor: Someone\nlanguage: en-US\n'
+        'description: "Quotes \'n\' <angles> survive escaping."\n'
+        "tts:\n  provider: mock\n  voice: mock-a\n",
+        encoding="utf-8",
+    )
+    (book / "chapters" / "01-intro.md").write_text(
+        "---\ntitle: Intro\n---\n\n# Intro\n\nOne paragraph is enough.\n", encoding="utf-8"
+    )
+    assert run(monkeypatch, build_site.main, str(book)) == 0
+    index = (book / "site" / "index.html").read_text("utf-8")
+    assert '<html lang="en-US">' in index
+    assert "<title>A Test Book</title>" in index
+    assert "&lt;angles&gt;" in index and "<angles>" not in index
+
+
 def test_default_assets_point_at_the_real_player():
     assets = build_site.default_assets()
     assert (assets / "index.html").is_file()
