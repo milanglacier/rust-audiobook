@@ -9,14 +9,12 @@ depth: >
   机制层（深度 3）：讲清楚每个概念为什么存在、编译器怎么检查、
   代码怎么写，但不涉及编译器内部实现或语言规范细节。
 tts:
-  provider: azure
-  voice: zh-CN-YunxiNeural
+  provider: minimax
+  model: speech-2.8-turbo
+  voice: "Chinese (Mandarin)_Warm_Bestie"
   speed: 1.0
   format: mp3
   loudnorm: true
-  instructions: >
-    沉稳、清晰、不急不缓的讲解者。像一个有经验的朋友在白板前给你讲 Rust，
-    节奏自然。中英文混读时英文单词自然带过，不要刻意加重。
   pause_ms:
     paragraph: 550
     heading: 900

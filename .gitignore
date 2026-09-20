@@ -1,0 +1,4 @@
+.env
+rust-audiobook/.cache/
+rust-audiobook/audio/
+rust-audiobook/site/
