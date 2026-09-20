@@ -13,10 +13,13 @@
 
 - The audiobook skill lives in `.agents/skills/make-audiobook`, with `.claude/skills/make-audiobook` as a symlink to it. Either path works for `--project`.
 - The commands (`audiobook-synth`, `audiobook-build`, `audiobook-serve`, `audiobook-stats`) are run with `uv run --project .claude/skills/make-audiobook <command>` (or `.agents/skills/make-audiobook`).
-- `audiobook-synth` and `audiobook-build` require `ffmpeg`. It is not on PATH by default — wrap the command with `nix-shell -p ffmpeg --run "..."`. Example:
+- `audiobook-synth` and `audiobook-build` require `ffmpeg`. On Nix systems (NixOS or any machine with Nix installed), wrap the command with `nix-shell -p ffmpeg --run "..."` to provide ffmpeg on the fly. On non-Nix systems, install ffmpeg yourself (e.g. `apt install ffmpeg`, `brew install ffmpeg`) so it is on PATH. Example:
   ```bash
   export $(grep -v '^#' .env | xargs)
+  # Nix:
   nix-shell -p ffmpeg --run "uv run --project .claude/skills/make-audiobook audiobook-synth rust-audiobook"
+  # Non-Nix (ffmpeg already on PATH):
+  uv run --project .claude/skills/make-audiobook audiobook-synth rust-audiobook
   ```
 - `audiobook-serve` and `audiobook-stats` do **not** need ffmpeg — `uv run` alone is fine.
 - `--list-voices` also does not need ffmpeg.
