@@ -1,0 +1,371 @@
+{
+ "id": "03-borrowing",
+ "title": "第三章 借用：不转移所有权的访问",
+ "audio": "03-borrowing.mp3",
+ "duration": 418.052,
+ "language": "zh",
+ "provider": "minimax",
+ "voice": "Chinese (Mandarin)_Warm_Bestie",
+ "source_hash": "02f7d0cbf758a1c07be3cbe36de7520dba81c50f25292b4f5f668a6e939c86d2",
+ "generated_at": "2026-09-20T04:22:02+00:00",
+ "segments": [
+  {
+   "i": 0,
+   "kind": "heading",
+   "html": "<h1>第三章 借用：不转移所有权的访问</h1>",
+   "level": 1,
+   "start": 0.0,
+   "end": 3.274,
+   "spoken": "第三章 借用：不转移所有权的访问"
+  },
+  {
+   "i": 1,
+   "kind": "para",
+   "html": "<p>上一章我们学了一条铁律：每个值只有一个 owner，把值传给函数，所有权就跟着走了，原来的变量就废了。这条规则很安全，但也很不方便。想象一下，你写了一个函数，只是想看一眼一个 String 的长度，结果调用完之后，原来那个 String 就不能用了。每次都要靠返回值把所有权还回来，代码会变得非常啰嗦。</p>",
+   "start": 4.174,
+   "end": 30.238,
+   "spoken": "上一章我们学了一条铁律：每个值只有一个 owner，把值传给函数，所有权就跟着走了，原来的变量就废了。这条规则很安全，但也很不方便。想象一下，你写了一个函数，只是想看一眼一个 String 的长度，结果调用完之后，原来那个 String 就不能用了。每次都要靠返回值把所有权还回来，代码会变得非常啰嗦。"
+  },
+  {
+   "i": 2,
+   "kind": "para",
+   "html": "<p>Rust 的解决方案叫做借用。借用的意思是：我不拿走你的东西，我只是借来看看，用完了还给你。这一章我们讲三件事：不可变引用怎么用，可变引用怎么用，以及 borrow checker 为什么不让你同时用两种引用。</p>",
+   "start": 30.788,
+   "end": 48.308,
+   "spoken": "Rust 的解决方案叫做借用。借用的意思是：我不拿走你的东西，我只是借来看看，用完了还给你。这一章我们讲三件事：不可变引用怎么用，可变引用怎么用，以及 borrow checker 为什么不让你同时用两种引用。"
+  },
+  {
+   "i": 3,
+   "kind": "heading",
+   "html": "<h2>不可变引用：借来看看</h2>",
+   "level": 2,
+   "start": 48.858,
+   "end": 51.157,
+   "spoken": "不可变引用：借来看看"
+  },
+  {
+   "i": 4,
+   "kind": "para",
+   "html": "<p>最常见的场景是：你有一个值，想传给一个函数读取，但不想放弃所有权。这时候你可以传一个引用。</p>",
+   "start": 52.057,
+   "end": 60.59,
+   "spoken": "最常见的场景是：你有一个值，想传给一个函数读取，但不想放弃所有权。这时候你可以传一个引用。"
+  },
+  {
+   "i": 5,
+   "kind": "para",
+   "html": "<p>我们来看一个例子。定义一个函数 calculate_length，参数不是 String，而是对 String 的引用，写作 &amp;String。调用的时候，你在变量前面加一个 &amp; 符号，表示&quot;我借给你看看&quot;。</p>",
+   "start": 61.14,
+   "end": 75.687,
+   "spoken": "我们来看一个例子。定义一个函数 calculate_length，参数不是 String，而是对 String 的引用，写作 &String。调用的时候，你在变量前面加一个 & 符号，表示\"我借给你看看\"。"
+  },
+  {
+   "i": 6,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn calculate_length(s: &amp;String) -&gt; usize {\n    s.len()\n}\n\nfn main() {\n    let s1 = String::from(&quot;hello&quot;);\n    let len = calculate_length(&amp;s1);\n    println!(&quot;'{}' 的长度是 {}&quot;, s1, len);\n}\n</code></pre>",
+   "start": 75.687,
+   "end": 75.687
+  },
+  {
+   "i": 7,
+   "kind": "para",
+   "html": "<p>注意，调用 calculate_length 之后，s1 依然有效。所有权没有转移，我们只是把 s1 借了出去。函数结束后，引用消失，但 s1 还是 s1 的 owner。</p>",
+   "start": 76.237,
+   "end": 88.904,
+   "spoken": "注意，调用 calculate_length 之后，s1 依然有效。所有权没有转移，我们只是把 s1 借了出去。函数结束后，引用消失，但 s1 还是 s1 的 owner。"
+  },
+  {
+   "i": 8,
+   "kind": "para",
+   "html": "<p>这里有一个重要的限制：不可变引用只能读，不能改。如果你在 calculate_length 里试图修改 s，编译器会拒绝。这就像你借了朋友的书，可以翻着看，但不能在上面写字。</p>",
+   "start": 89.454,
+   "end": 104.849,
+   "spoken": "这里有一个重要的限制：不可变引用只能读，不能改。如果你在 calculate_length 里试图修改 s，编译器会拒绝。这就像你借了朋友的书，可以翻着看，但不能在上面写字。"
+  },
+  {
+   "i": 9,
+   "kind": "para",
+   "html": "<p>而且，不可变引用可以同时存在多个。你可以把同一个 String 借给三个函数同时读，没有任何问题。多个读者不会互相干扰，所以编译器允许。</p>",
+   "start": 105.399,
+   "end": 117.729,
+   "spoken": "而且，不可变引用可以同时存在多个。你可以把同一个 String 借给三个函数同时读，没有任何问题。多个读者不会互相干扰，所以编译器允许。"
+  },
+  {
+   "i": 10,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn main() {\n    let s = String::from(&quot;hello&quot;);\n    let r1 = &amp;s;\n    let r2 = &amp;s;\n    let r3 = &amp;s;\n    println!(&quot;{}, {}, {}&quot;, r1, r2, r3);\n}\n</code></pre>",
+   "start": 117.729,
+   "end": 117.729
+  },
+  {
+   "i": 11,
+   "kind": "para",
+   "html": "<p>所以记住：不可变引用的规则是——可以有任意多个，但只能读，不能写。</p>",
+   "start": 118.279,
+   "end": 124.676,
+   "spoken": "所以记住：不可变引用的规则是——可以有任意多个，但只能读，不能写。"
+  },
+  {
+   "i": 12,
+   "kind": "heading",
+   "html": "<h2>可变引用：借来改改</h2>",
+   "level": 2,
+   "start": 125.226,
+   "end": 127.443,
+   "spoken": "可变引用：借来改改"
+  },
+  {
+   "i": 13,
+   "kind": "para",
+   "html": "<p>有时候你确实需要修改借来的值。Rust 提供了可变引用，写作 &amp;mut。要使用可变引用，原来的变量本身必须是 mut 的，而且函数参数也要声明为 &amp;mut String。</p>",
+   "start": 128.343,
+   "end": 141.857,
+   "spoken": "有时候你确实需要修改借来的值。Rust 提供了可变引用，写作 &mut。要使用可变引用，原来的变量本身必须是 mut 的，而且函数参数也要声明为 &mut String。"
+  },
+  {
+   "i": 14,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn add_world(s: &amp;mut String) {\n    s.push_str(&quot;, world&quot;);\n}\n\nfn main() {\n    let mut s = String::from(&quot;hello&quot;);\n    add_world(&amp;mut s);\n    println!(&quot;{}&quot;, s);\n}\n</code></pre>",
+   "start": 141.857,
+   "end": 141.857
+  },
+  {
+   "i": 15,
+   "kind": "para",
+   "html": "<p>这段代码可以编译通过。add_world 通过可变引用修改了 s 的内容，调用结束后 s 变成了 &quot;hello, world&quot;。所有权始终在 main 里，add_world 只是借来改了一下。</p>",
+   "start": 142.407,
+   "end": 156.223,
+   "spoken": "这段代码可以编译通过。add_world 通过可变引用修改了 s 的内容，调用结束后 s 变成了 \"hello, world\"。所有权始终在 main 里，add_world 只是借来改了一下。"
+  },
+  {
+   "i": 16,
+   "kind": "para",
+   "html": "<p>但是，可变引用有一条严格的限制：同一时刻，对同一个值只能存在一个可变引用。如果你试图同时创建两个可变引用，编译器会报错。</p>",
+   "start": 156.773,
+   "end": 168.755,
+   "spoken": "但是，可变引用有一条严格的限制：同一时刻，对同一个值只能存在一个可变引用。如果你试图同时创建两个可变引用，编译器会报错。"
+  },
+  {
+   "i": 17,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn main() {\n    let mut s = String::from(&quot;hello&quot;);\n    let r1 = &amp;mut s;\n    let r2 = &amp;mut s; // 编译错误：cannot borrow `s` as mutable more than once\n    println!(&quot;{}, {}&quot;, r1, r2);\n}\n</code></pre>",
+   "start": 168.755,
+   "end": 168.755
+  },
+  {
+   "i": 18,
+   "kind": "para",
+   "html": "<p>为什么要有这条限制？因为如果两个可变引用同时存在，就意味着两段代码可以同时修改同一块数据。在单线程里，这会导致逻辑错误；在多线程里，这就是数据竞争。Rust 在编译期直接把这条路堵死了。</p>",
+   "start": 169.305,
+   "end": 186.924,
+   "spoken": "为什么要有这条限制？因为如果两个可变引用同时存在，就意味着两段代码可以同时修改同一块数据。在单线程里，这会导致逻辑错误；在多线程里，这就是数据竞争。Rust 在编译期直接把这条路堵死了。"
+  },
+  {
+   "i": 19,
+   "kind": "para",
+   "html": "<p>所以记住：可变引用的规则是——同一时刻只能有一个，但这一个可以读也可以写。</p>",
+   "start": 187.474,
+   "end": 195.148,
+   "spoken": "所以记住：可变引用的规则是——同一时刻只能有一个，但这一个可以读也可以写。"
+  },
+  {
+   "i": 20,
+   "kind": "heading",
+   "html": "<h2>不可变和可变不能共存</h2>",
+   "level": 2,
+   "start": 195.698,
+   "end": 198.334,
+   "spoken": "不可变和可变不能共存"
+  },
+  {
+   "i": 21,
+   "kind": "para",
+   "html": "<p>接下来是最容易让初学者困惑的一条规则：不可变引用和可变引用不能同时存在。</p>",
+   "start": 199.234,
+   "end": 206.444,
+   "spoken": "接下来是最容易让初学者困惑的一条规则：不可变引用和可变引用不能同时存在。"
+  },
+  {
+   "i": 22,
+   "kind": "para",
+   "html": "<p>我们来看一个例子。先创建一个 String，拿到两个不可变引用 r1 和 r2，然后试图再拿一个可变引用 r3。</p>",
+   "start": 206.994,
+   "end": 216.967,
+   "spoken": "我们来看一个例子。先创建一个 String，拿到两个不可变引用 r1 和 r2，然后试图再拿一个可变引用 r3。"
+  },
+  {
+   "i": 23,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn main() {\n    let mut s = String::from(&quot;hello&quot;);\n    let r1 = &amp;s;\n    let r2 = &amp;s;\n    let r3 = &amp;mut s; // 编译错误\n    println!(&quot;{}, {}, {}&quot;, r1, r2, r3);\n}\n</code></pre>",
+   "start": 216.967,
+   "end": 216.967
+  },
+  {
+   "i": 24,
+   "kind": "para",
+   "html": "<p>编译器会说：cannot borrow s as mutable because it is also borrowed as immutable。</p>",
+   "start": 217.517,
+   "end": 223.566,
+   "spoken": "编译器会说：cannot borrow s as mutable because it is also borrowed as immutable。"
+  },
+  {
+   "i": 25,
+   "kind": "para",
+   "html": "<p>这条规则背后的道理很直观：如果有人正在读一个值，而你突然把值改了，读的人拿到的数据就不一致了。Rust 把这种冲突消灭在编译期。</p>",
+   "start": 224.116,
+   "end": 236.225,
+   "spoken": "这条规则背后的道理很直观：如果有人正在读一个值，而你突然把值改了，读的人拿到的数据就不一致了。Rust 把这种冲突消灭在编译期。"
+  },
+  {
+   "i": 26,
+   "kind": "para",
+   "html": "<p>不过，这里有一个细节值得注意。Rust 的 borrow checker 并不是简单地看&quot;同一个作用域里有没有同时声明两种引用&quot;。编译器实际上追踪的是引用的使用范围。如果不可变引用在某一行之后就再也没被用过，那从那一行开始，你就可以创建可变引用了。这个特性叫做 non-lexical lifetime，简称 NLL。</p>",
+   "start": 236.775,
+   "end": 260.749,
+   "spoken": "不过，这里有一个细节值得注意。Rust 的 borrow checker 并不是简单地看\"同一个作用域里有没有同时声明两种引用\"。编译器实际上追踪的是引用的使用范围。如果不可变引用在某一行之后就再也没被用过，那从那一行开始，你就可以创建可变引用了。这个特性叫做 non-lexical lifetime，简称 NLL。"
+  },
+  {
+   "i": 27,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn main() {\n    let mut s = String::from(&quot;hello&quot;);\n    let r1 = &amp;s;\n    let r2 = &amp;s;\n    println!(&quot;{}, {}&quot;, r1, r2);\n    // r1 和 r2 在这之后再也没被用过\n    let r3 = &amp;mut s; // 没问题\n    println!(&quot;{}&quot;, r3);\n}\n</code></pre>",
+   "start": 260.749,
+   "end": 260.749
+  },
+  {
+   "i": 28,
+   "kind": "para",
+   "html": "<p>这段代码可以编译通过，因为 r1 和 r2 的最后一次使用在 println 那一行，之后编译器认为不可变引用已经结束了，所以允许创建可变引用 r3。</p>",
+   "start": 261.299,
+   "end": 273.629,
+   "spoken": "这段代码可以编译通过，因为 r1 和 r2 的最后一次使用在 println 那一行，之后编译器认为不可变引用已经结束了，所以允许创建可变引用 r3。"
+  },
+  {
+   "i": 29,
+   "kind": "para",
+   "html": "<p>换句话说，borrow checker 关心的是引用实际被使用的范围，而不是变量声明的作用域。这让规则严格的同时又不会过度限制你。</p>",
+   "start": 274.179,
+   "end": 284.582,
+   "spoken": "换句话说，borrow checker 关心的是引用实际被使用的范围，而不是变量声明的作用域。这让规则严格的同时又不会过度限制你。"
+  },
+  {
+   "i": 30,
+   "kind": "heading",
+   "html": "<h2>悬垂引用：编译器的底线</h2>",
+   "level": 2,
+   "start": 285.132,
+   "end": 287.686,
+   "spoken": "悬垂引用：编译器的底线"
+  },
+  {
+   "i": 31,
+   "kind": "para",
+   "html": "<p>还有一种情况编译器绝对不会放过，那就是悬垂引用。悬垂引用的意思是：一个引用指向的值已经被释放了，但引用还在被使用。在 C 语言里，这是经典的 use-after-free bug。在 Rust 里，这是编译错误。</p>",
+   "start": 288.586,
+   "end": 306.252,
+   "spoken": "还有一种情况编译器绝对不会放过，那就是悬垂引用。悬垂引用的意思是：一个引用指向的值已经被释放了，但引用还在被使用。在 C 语言里，这是经典的 use-after-free bug。在 Rust 里，这是编译错误。"
+  },
+  {
+   "i": 32,
+   "kind": "para",
+   "html": "<p>我们来看一个例子。写一个函数 dangle，在函数内部创建一个 String，然后试图返回对这个 String 的引用。</p>",
+   "start": 306.802,
+   "end": 314.731,
+   "spoken": "我们来看一个例子。写一个函数 dangle，在函数内部创建一个 String，然后试图返回对这个 String 的引用。"
+  },
+  {
+   "i": 33,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn dangle() -&gt; &amp;String {\n    let s = String::from(&quot;hello&quot;);\n    &amp;s\n}\n</code></pre>",
+   "start": 314.731,
+   "end": 314.731
+  },
+  {
+   "i": 34,
+   "kind": "para",
+   "html": "<p>编译器会拒绝这段代码。原因很明确：s 是在 dangle 函数内部创建的，当 dangle 执行结束，s 离开作用域，String 的内存被释放。如果编译器允许你返回 &amp;s，那调用者拿到的就是一个指向已释放内存的引用——一个悬垂指针。</p>",
+   "start": 315.281,
+   "end": 334.089,
+   "spoken": "编译器会拒绝这段代码。原因很明确：s 是在 dangle 函数内部创建的，当 dangle 执行结束，s 离开作用域，String 的内存被释放。如果编译器允许你返回 &s，那调用者拿到的就是一个指向已释放内存的引用——一个悬垂指针。"
+  },
+  {
+   "i": 35,
+   "kind": "para",
+   "html": "<p>Rust 的做法是：如果编译器发现引用可能比引用指向的值活得更久，直接编译失败。正确的写法是返回 String 本身，把所有权交给调用者，而不是返回引用。</p>",
+   "start": 334.639,
+   "end": 347.434,
+   "spoken": "Rust 的做法是：如果编译器发现引用可能比引用指向的值活得更久，直接编译失败。正确的写法是返回 String 本身，把所有权交给调用者，而不是返回引用。"
+  },
+  {
+   "i": 36,
+   "kind": "display",
+   "html": "<pre><code class=\"language-rust\">fn no_dangle() -&gt; String {\n    let s = String::from(&quot;hello&quot;);\n    s\n}\n</code></pre>",
+   "start": 347.434,
+   "end": 347.434
+  },
+  {
+   "i": 37,
+   "kind": "para",
+   "html": "<p>这就是 Rust 的核心承诺之一：只要你的代码编译通过，就不会出现悬垂引用。编译器替你检查了所有引用的有效性。</p>",
+   "start": 347.984,
+   "end": 357.365,
+   "spoken": "这就是 Rust 的核心承诺之一：只要你的代码编译通过，就不会出现悬垂引用。编译器替你检查了所有引用的有效性。"
+  },
+  {
+   "i": 38,
+   "kind": "heading",
+   "html": "<h2>回顾</h2>",
+   "level": 2,
+   "start": 357.915,
+   "end": 358.681,
+   "spoken": "回顾"
+  },
+  {
+   "i": 39,
+   "kind": "para",
+   "html": "<p>我们来回顾这一章的要点。</p>",
+   "start": 359.581,
+   "end": 361.578,
+   "spoken": "我们来回顾这一章的要点。"
+  },
+  {
+   "i": 40,
+   "kind": "para",
+   "html": "<p>第一，不可变引用 &amp;T 允许你读取一个值而不转移所有权。不可变引用可以同时存在多个。</p>",
+   "start": 362.128,
+   "end": 370.266,
+   "spoken": "第一，不可变引用 对 T 的引用 允许你读取一个值而不转移所有权。不可变引用可以同时存在多个。"
+  },
+  {
+   "i": 41,
+   "kind": "para",
+   "html": "<p>第二，可变引用 &amp;mut T 允许你修改一个值而不转移所有权。但同一时刻只能有一个可变引用。</p>",
+   "start": 370.816,
+   "end": 379.768,
+   "spoken": "第二，可变引用 对 T 的可变引用 允许你修改一个值而不转移所有权。但同一时刻只能有一个可变引用。"
+  },
+  {
+   "i": 42,
+   "kind": "para",
+   "html": "<p>第三，不可变引用和可变引用不能同时存在，这是 Rust 在编译期防止数据竞争的关键手段。borrow checker 追踪的是引用实际被使用的范围，而不是变量的词法作用域。</p>",
+   "start": 380.318,
+   "end": 394.61,
+   "spoken": "第三，不可变引用和可变引用不能同时存在，这是 Rust 在编译期防止数据竞争的关键手段。borrow checker 追踪的是引用实际被使用的范围，而不是变量的词法作用域。"
+  },
+  {
+   "i": 43,
+   "kind": "para",
+   "html": "<p>第四，引用不能比引用指向的值活得更久。试图创建悬垂引用会导致编译错误，这让 use-after-free 这类 bug 在 Rust 中彻底消失。</p>",
+   "start": 395.16,
+   "end": 406.63,
+   "spoken": "第四，引用不能比引用指向的值活得更久。试图创建悬垂引用会导致编译错误，这让 use-after-free 这类 bug 在 Rust 中彻底消失。"
+  },
+  {
+   "i": 44,
+   "kind": "para",
+   "html": "<p>下一章我们会看到，当编译器需要在函数签名中表达&quot;这个引用能活多久&quot;的时候，就需要用到一个新概念——生命周期。</p>",
+   "start": 407.18,
+   "end": 417.502,
+   "spoken": "下一章我们会看到，当编译器需要在函数签名中表达\"这个引用能活多久\"的时候，就需要用到一个新概念——生命周期。"
+  }
+ ]
+}
