@@ -188,7 +188,7 @@ audiobook-cache BOOK_DIR gc [--yes]      # prune long-unused, unreferenced clips
 - **`.cache/tts/`** holds every clip ever synthesized, including ones the
   transcript no longer uses, so reverting a paragraph costs nothing.
   `audiobook-cache gc` lists clips that neither the transcript nor the
-  manifests in `audio/` reference *and* that have gone unused for 180 days
+  manifests in `audio/` reference *and* that have gone unused for 60 days
   (`--older-than DAYS`); `--yes` deletes them. Run it only when the user asks
   for disk space back.
 

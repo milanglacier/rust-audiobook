@@ -3,7 +3,7 @@
     audiobook-cache BOOK_DIR                        # stats
     audiobook-cache BOOK_DIR gc                     # what gc would remove
     audiobook-cache BOOK_DIR gc --yes               # remove it
-    audiobook-cache BOOK_DIR gc --older-than 30     # days unused (default 180)
+    audiobook-cache BOOK_DIR gc --older-than 30     # days unused (default 60)
 
 Every clip in the cache was paid for, and one the transcript no longer uses
 is what makes reverting a paragraph free, so gc removes a clip only when both
@@ -33,8 +33,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("book_dir")
     ap.add_argument("action", nargs="?", choices=("stats", "gc"), default="stats")
-    ap.add_argument("--older-than", type=float, default=180, metavar="DAYS",
-                    help="gc: only clips unused for this many days (default 180)")
+    ap.add_argument("--older-than", type=float, default=60, metavar="DAYS",
+                    help="gc: only clips unused for this many days (default 60)")
     ap.add_argument("--yes", action="store_true", help="gc: delete (default: list only)")
     args = ap.parse_args()
 
