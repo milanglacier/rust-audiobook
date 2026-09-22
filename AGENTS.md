@@ -63,3 +63,7 @@ Config is `vercel.json` + `.vercelignore` at the repo root. Things those files d
 - Vercel's build image ships a Python that `uv` manages, so the `buildCommand` uses the image's
   own `uv` and installs the standalone one only as a fallback. Never `pip3 install uv` there —
   pip refuses to modify that Python (PEP 668) and the build fails.
+- The `buildCommand` pins `UV_PROJECT_ENVIRONMENT` and calls `audiobook-build` by absolute path
+  rather than `uv run`. On Vercel `uv run` failed with `Failed to spawn: audiobook-build`, i.e. it
+  resolved an environment without the console script; an explicit `uv sync` to a known path
+  removes the guesswork, and any failure names the path instead.
