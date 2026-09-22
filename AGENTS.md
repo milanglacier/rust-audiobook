@@ -58,12 +58,8 @@ uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/si
 
 Config is `vercel.json` + `.vercelignore` at the repo root. Things those files don't tell you:
 
-- **Git-based deploys only.** `site/` is gitignored, so Vercel runs `audiobook-build` via the
-  `buildCommand` in `vercel.json`. It needs no ffmpeg.
-- Vercel's build image ships a Python that `uv` manages, so the `buildCommand` uses the image's
-  own `uv` and installs the standalone one only as a fallback. Never `pip3 install uv` there —
-  pip refuses to modify that Python (PEP 668) and the build fails.
-- The `buildCommand` pins `UV_PROJECT_ENVIRONMENT` and calls `audiobook-build` by absolute path
-  rather than `uv run`. On Vercel `uv run` failed with `Failed to spawn: audiobook-build`, i.e. it
-  resolved an environment without the console script; an explicit `uv sync` to a known path
-  removes the guesswork, and any failure names the path instead.
+- **Git-based deploys only.** `site/` is gitignored, so Vercel regenerates it by running
+  `scripts/vercel-build.sh`. Keep the `buildCommand` in `vercel.json` a one-liner pointing at
+  that script — Vercel's schema caps `buildCommand` at 256 characters.
+- The script comments explain its own two non-obvious choices (why not `pip3 install uv`, why not
+  `uv run`). Read it before changing the deploy.
