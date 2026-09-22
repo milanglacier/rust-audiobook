@@ -13,7 +13,7 @@
 
 - The audiobook skill lives in `.agents/skills/make-audiobook`, with `.claude/skills/make-audiobook` as a symlink to it. Either path works for `--project`.
 - The commands (`audiobook-synth`, `audiobook-build`, `audiobook-serve`, `audiobook-stats`) are run with `uv run --project .claude/skills/make-audiobook <command>` (or `.agents/skills/make-audiobook`).
-- `audiobook-synth` and `audiobook-build` require `ffmpeg`. On Nix systems (NixOS or any machine with Nix installed), wrap the command with `nix-shell -p ffmpeg --run "..."` to provide ffmpeg on the fly. On non-Nix systems, install ffmpeg yourself (e.g. `apt install ffmpeg`, `brew install ffmpeg`) so it is on PATH. Example:
+- `audiobook-synth` requires `ffmpeg`. On Nix systems (NixOS or any machine with Nix installed), wrap the command with `nix-shell -p ffmpeg --run "..."` to provide ffmpeg on the fly. On non-Nix systems, install ffmpeg yourself (e.g. `apt install ffmpeg`, `brew install ffmpeg`) so it is on PATH. Example:
   ```bash
   export $(grep -v '^#' .env | xargs)
   # Nix:
@@ -21,7 +21,9 @@
   # Non-Nix (ffmpeg already on PATH):
   uv run --project .claude/skills/make-audiobook audiobook-synth rust-audiobook
   ```
-- `audiobook-serve` and `audiobook-stats` do **not** need ffmpeg — `uv run` alone is fine.
+- `audiobook-build`, `audiobook-serve` and `audiobook-stats` do **not** need ffmpeg — `uv run` alone is fine.
+  `build_site.py` imports `audiobook_lib.audio` only for the `AUDIO_EXTS` constant; the ffmpeg
+  lookup is lazy, inside the encode helpers. This is what lets Vercel build the site (see below).
 - `--list-voices` also does not need ffmpeg.
 
 ## Build pipeline
@@ -30,7 +32,7 @@ The full rebuild sequence is:
 ```bash
 export $(grep -v '^#' .env | xargs)
 nix-shell -p ffmpeg --run "uv run --project .claude/skills/make-audiobook audiobook-synth rust-audiobook"
-nix-shell -p ffmpeg --run "uv run --project .claude/skills/make-audiobook audiobook-build rust-audiobook"
+uv run --project .claude/skills/make-audiobook audiobook-build rust-audiobook
 uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/site --host 0.0.0.0 --port 8000
 ```
 
@@ -47,11 +49,27 @@ uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/si
 
 - `.env` is gitignored (contains API keys).
 - `.cache/tts/` is gitignored (local paragraph-level TTS cache, keyed by voice+text).
-- `audio/` and `site/` are tracked — synthesis costs money and the site is the final deliverable.
+- `audio/` is tracked — synthesis costs money, so the mp3s and their timing JSON are the one
+  thing that must never be lost.
+- `site/` is **not** tracked (gitignored): it is pure build output, regenerated from `audio/` +
+  `chapters/` + `book.yaml` by `audiobook-build`, which Vercel now runs on every deploy.
+  Note that tracking it never cost anything in `.git` — git is content-addressed, so
+  `site/audio/X.mp3` and `audio/X.mp3` were always one blob with two tree entries. What it cost
+  was the *working tree*: git does not preserve the hardlink `audiobook-build` makes, so a fresh
+  clone materialised both copies (180 MB instead of 91 MB).
 
 ## Deploying to Vercel
 
-Config is `vercel.json` + `.vercelignore` at the repo root. Two things those files don't tell you:
+Config is `vercel.json` + `.vercelignore` at the repo root. Things those files don't tell you:
 
-- `site/` is ~77 MB of mp3, and the Vercel **CLI** source-upload cap is 100 MB on Hobby (1 GB on Pro). A few more chapters will break `vercel deploy`; Git-based deployments don't go through that upload path.
+- **Git-based deploys only.** `site/` is gitignored, so Vercel builds it with the `buildCommand`
+  in `vercel.json`: `pip3 install uv` then `uv run --python 3.12 --project
+  .agents/skills/make-audiobook audiobook-build rust-audiobook`. It needs no ffmpeg, and `uv`
+  fetches its own CPython so the build image's system `python3` version does not matter.
+  The build inputs (`chapters/`, `audio/`, `book.yaml`, and the tracked skill itself) all come
+  from the repo clone.
+- **`vercel deploy` from the CLI no longer works**, by design. `.vercelignore` excludes the build
+  inputs, so a CLI deploy fails fast instead of silently uploading 90 MB of mp3 — which was
+  already close to the 100 MB Hobby source-upload cap (1 GB on Pro). Git deploys ignore
+  `.vercelignore` and do not go through that upload path.
 - Do **not** add a SPA rewrite to `index.html`. The player is hash-routed (`#/`), so every route is already the one real `index.html`; a catch-all rewrite would only mask 404s on missing audio/JSON.

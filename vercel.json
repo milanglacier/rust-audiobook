@@ -1,6 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "buildCommand": "pip3 install uv && uv run --python 3.12 --project .agents/skills/make-audiobook audiobook-build rust-audiobook",
+  "installCommand": "true",
   "outputDirectory": "rust-audiobook/site",
   "cleanUrls": true,
   "trailingSlash": false,

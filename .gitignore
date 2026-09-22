@@ -1,3 +1,4 @@
 .env
 rust-audiobook/.cache/
 .vercel/
+rust-audiobook/site/
