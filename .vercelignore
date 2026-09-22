@@ -1,6 +1,5 @@
 # This applies to Git deploys too, not just `vercel deploy`. Anything listed here is
-# absent from the build context, so the buildCommand's inputs must NOT be listed:
-# .agents/ (the skill), scripts/, and rust-audiobook/{book.yaml,chapters/,audio/}.
+# absent from the build context.
 .env
 .vercel/
 .claude/

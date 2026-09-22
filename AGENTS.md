@@ -62,8 +62,4 @@ Config is `vercel.json` + `.vercelignore` at the repo root. Things those files d
   `scripts/vercel-build.sh`. Keep the `buildCommand` in `vercel.json` a one-liner pointing at
   that script — Vercel's schema caps `buildCommand` at 256 characters.
 - **`.vercelignore` applies to Git deploys, not just `vercel deploy`.** Anything listed there is
-  absent from the build context, so the build inputs must stay unlisted: `.agents/` (the skill),
-  `scripts/`, and `rust-audiobook/{book.yaml,chapters/,audio/}`. Listing `.agents/` makes uv fail
-  with `No pyproject.toml found` (or `Failed to spawn: audiobook-build`), which looks like a uv
-  problem and is not.
-- The script comments explain why it does not use `pip3 install uv`.
+  absent from the build context.
