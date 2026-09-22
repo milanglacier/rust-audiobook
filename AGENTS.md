@@ -1,5 +1,39 @@
 # Project Rules
 
+## Writing
+
+Write in plain, simple language everywhere: **code, comments, docstrings,
+commit messages, docs, README documentation, chapter transcripts, and
+explanations to the user**.
+
+### Code, Comments, Docstrings & Transcripts
+
+The text in the repo must read as the final, clean version. It should carry
+no trace of the back and forth it took to get there, as if it had never been
+written any other way. Describe only the current state:
+
+- No references to earlier drafts or revisions: no "in the previous version",
+  no "we changed this to", no contrast with earlier behavior. Record behavior
+  changes in commit messages, where readers have the relevant context.
+- Chapter transcripts are the finished book, not a draft with corrections
+  layered on top. If an explanation needs rework, rewrite the passage itself
+  so the book reads as one consistent whole. References to earlier chapters
+  are part of the finished book and are fine.
+
+### Commit Messages & Communication
+
+Write commit messages and explanations to the user in plain English, since the
+user may not read the code. Use complete sentences, not compressed jargon or
+dense noun phrases. Bad: "fix: tts cache invalidation". Good: "fix(cache):
+re-synthesizing a chapter after an edit only pays again for the paragraphs that
+changed". Do not coin terminology; say what the thing does instead.
+
+Commit messages should read like a human explaining the change, not
+telegraphic shorthand. The maintainer has repeatedly pushed back on terse,
+abbreviated subject lines that drop the words that carry the actual intent.
+Write the subject as a full, clear sentence. It may be long — that is fine —
+but it must name the real outcome, not a compressed label for it.
+
 ## Serving
 
 - When serving the audiobook site, bind to `0.0.0.0` (not `127.0.0.1`).
@@ -29,6 +63,7 @@
 ## Build pipeline
 
 The full rebuild sequence is:
+
 ```bash
 export $(grep -v '^#' .env | xargs)
 nix-shell -p ffmpeg --run "uv run --project .claude/skills/make-audiobook audiobook-synth rust-audiobook"
@@ -42,8 +77,11 @@ uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/si
   After drafting new or revised chapter transcripts:
   1. Run `audiobook-stats` and share the results.
   2. **STOP and wait.** Do not proceed until the user explicitly says to synthesize (e.g. "go ahead", "synth it", "approved").
-  3. Only then run `audiobook-synth`.
-  Synthesis costs real money and cannot be undone. Skipping the review step or assuming approval is never acceptable — not even if the stats show zero warnings, not even if the user said "do everything", not even if you think the chapters are obviously fine. Always wait for the explicit go-ahead.
+  3. Only then run `audiobook-synth`. Synthesis costs real money and cannot be
+     undone. Skipping the review step or assuming approval is NEVER acceptable
+     , not even if the stats show zero warnings, not even if the user said "do
+     everything", not even if you think the chapters are obviously fine. Always
+     wait for the explicit go-ahead.
 
 ## Version control
 
@@ -54,7 +92,7 @@ uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/si
 - `audio/` is tracked — synthesis costs money, so the mp3s and their timing JSON are the one
   thing that must never be lost.
 - `site/` is **not** tracked (gitignored): it is pure build output, regenerated from `audio/` +
-  `chapters/` + `book.yaml` by `audiobook-build`, which Vercel now runs on every deploy.
+  `chapters/` + `book.yaml` by `audiobook-build`, which Vercel runs on every deploy.
 
 ## Deploying to Vercel
 
