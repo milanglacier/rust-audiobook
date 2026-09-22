@@ -58,14 +58,8 @@ uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/si
 
 Config is `vercel.json` + `.vercelignore` at the repo root. Things those files don't tell you:
 
-- **Git-based deploys only.** `site/` is gitignored, so Vercel builds it with the `buildCommand`
-  in `vercel.json`: install `uv` if absent, then `uv run --python 3.12 --project
-  .agents/skills/make-audiobook audiobook-build rust-audiobook`. No ffmpeg needed, and `uv`
-  fetches its own CPython so the build image's Python version does not matter.
-- **Do not use `pip3 install uv` in the buildCommand.** Vercel's build image ships a Python that
-  `uv` itself manages, so pip refuses with PEP 668 `externally-managed-environment` and the build
-  fails. Use the standalone installer instead, guarded so it is skipped when the image already
-  provides `uv`:
-  `if ! command -v uv >/dev/null 2>&1; then curl -LsSf https://astral.sh/uv/install.sh | sh; fi`
-  followed by `export PATH="$HOME/.local/bin:$PATH"`. It is unpinned, so a uv release could in
-  principle break the build; pin a version in the URL if that ever matters.
+- **Git-based deploys only.** `site/` is gitignored, so Vercel runs `audiobook-build` via the
+  `buildCommand` in `vercel.json`. It needs no ffmpeg.
+- Vercel's build image ships a Python that `uv` manages, so the `buildCommand` uses the image's
+  own `uv` and installs the standalone one only as a fallback. Never `pip3 install uv` there —
+  pip refuses to modify that Python (PEP 668) and the build fails.
