@@ -14,6 +14,8 @@ audiobook-stats = "audiobook_lib.cli.transcript_stats:main"
 audiobook-synth = "audiobook_lib.cli.synth:main"
 audiobook-build = "audiobook_lib.cli.build_site:main"
 audiobook-serve = "audiobook_lib.cli.serve:main"
+audiobook-clean = "audiobook_lib.cli.clean:main"
+audiobook-cache = "audiobook_lib.cli.cache:main"
 
 [dependency-groups]
 dev = ["pytest>=8"]

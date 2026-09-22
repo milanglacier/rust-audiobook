@@ -2,14 +2,17 @@
 
 Everything that touches samples goes through ffmpeg. A provider may hand back
 whatever its API offers; the clip is normalized exactly once — on its way into
-the cache — into canonical WAV (mono, signed 16-bit little-endian, at the
-configured sample rate), and a chapter is assembled by a single call to the
-concat demuxer.
+the cache — into canonical FLAC (mono, 16-bit, at the configured sample rate),
+and a chapter is assembled by a single call to the concat demuxer.
+
+FLAC because the cache is the one copy of every paid-for clip and is kept
+indefinitely: it is lossless, so assembly sees exactly the normalized samples,
+at well under half the size of PCM.
 
 Timing stays sample-exact because it never comes from a decoder: the number of
-frames in each cached WAV (and in each silence WAV) is read from the header
-with stdlib `wave`, and the concat demuxer copies frames verbatim when all the
-inputs share rate/channels/format — which normalization guarantees.
+frames in each clip (and in each silence clip) is read from FLAC's STREAMINFO
+header, and the concat demuxer yields every frame when all the inputs share
+rate/channels/codec, which normalization guarantees.
 """
 
 from __future__ import annotations
@@ -18,7 +21,6 @@ import json
 import os
 import shutil
 import subprocess
-import wave
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
@@ -49,9 +51,13 @@ class AudioError(RuntimeError):
     pass
 
 
+# the on-disk format of a normalized clip
+CLIP_EXT = ".flac"
+
+
 @dataclass
 class Clip:
-    """A normalized WAV on disk: mono, 16-bit, `sample_rate`."""
+    """A normalized FLAC on disk: mono, 16-bit, `sample_rate`."""
 
     path: Path
     frames: int
@@ -128,10 +134,13 @@ _BASE = ["-nostdin", "-hide_banner", "-loglevel", "error", "-y"]
 # -- normalization ----------------------------------------------------------
 
 
-def normalize_to_wav(
+_CLIP_CODEC = ["-c:a", "flac", "-sample_fmt", "s16", "-compression_level", "8", "-f", "flac"]
+
+
+def normalize_clip(
     data: bytes, fmt: str, dest: str | Path, sample_rate: int, src_rate: int | None = None
 ) -> Clip:
-    """Decode whatever the provider returned into canonical WAV at `dest`.
+    """Decode whatever the provider returned into a canonical FLAC at `dest`.
 
     `fmt` is `"pcm_s16le"` (headerless samples, `src_rate` required) or the
     name of a container/codec — `"wav"`, `"mp3"`, `"ogg"`, …; for those the
@@ -143,36 +152,51 @@ def normalize_to_wav(
     args = [ffmpeg_path(), *_BASE]
     if fmt == "pcm_s16le":
         if not src_rate:
-            raise AudioError("normalize_to_wav: pcm_s16le needs a sample_rate")
+            raise AudioError("normalize_clip: pcm_s16le needs a sample_rate")
         args += ["-f", "s16le", "-ar", str(int(src_rate)), "-ac", "1"]
-    args += ["-i", "pipe:0", "-ar", str(int(sample_rate)), "-ac", "1",
-             "-c:a", "pcm_s16le", "-f", "wav", str(dest)]
+    args += ["-i", "pipe:0", "-ar", str(int(sample_rate)), "-ac", "1", *_CLIP_CODEC, str(dest)]
     _run(args, stdin=data)
-    frames, rate = wav_info(dest)
+    frames, rate = clip_info(dest)
     return Clip(path=dest, frames=frames, sample_rate=rate)
 
 
-def wav_info(path: str | Path) -> tuple[int, int]:
-    """(frames, sample_rate) straight from the WAV header — the timing truth."""
-    with wave.open(str(path), "rb") as w:
-        if w.getnchannels() != 1 or w.getsampwidth() != 2:
-            raise AudioError(f"{path}: expected mono 16-bit wav")
-        return w.getnframes(), w.getframerate()
+def clip_info(path: str | Path) -> tuple[int, int]:
+    """(frames, sample_rate) straight from the header — the timing truth.
+
+    FLAC requires STREAMINFO to be the first metadata block; from its byte 10:
+    20 bits sample rate, 3 bits channels-1, 5 bits bits-per-sample-1, 36 bits
+    total samples.
+    """
+    with open(path, "rb") as fh:
+        head = fh.read(42)
+    if len(head) < 42 or head[:4] != b"fLaC" or head[4] & 0x7F != 0:
+        raise AudioError(f"{path}: not a FLAC file")
+    bits = int.from_bytes(head[18:26], "big")
+    rate = bits >> 44
+    channels = ((bits >> 41) & 0x7) + 1
+    depth = ((bits >> 36) & 0x1F) + 1
+    frames = bits & ((1 << 36) - 1)
+    if channels != 1 or depth != 16:
+        raise AudioError(f"{path}: expected mono 16-bit flac")
+    if frames == 0:  # the encoder never came back to fill it in
+        raise AudioError(f"{path}: FLAC header has no sample count")
+    return frames, rate
 
 
 def silence_clip(ms: float, sample_rate: int, cache_dir: str | Path) -> Clip:
-    """A WAV of `ms` milliseconds of silence, generated once per distinct length."""
+    """`ms` milliseconds of silence, generated once per distinct length — in the
+    clip format, since the concat demuxer wants one codec across its inputs."""
     key = int(round(ms))
-    path = Path(cache_dir) / f"{key}.wav"
+    path = Path(cache_dir) / f"{key}{CLIP_EXT}"
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         _run([
             ffmpeg_path(), *_BASE,
             "-f", "lavfi", "-i", f"anullsrc=r={int(sample_rate)}:cl=mono",
             "-t", f"{max(0.0, key / 1000.0):.6f}",
-            "-c:a", "pcm_s16le", "-f", "wav", str(path),
+            *_CLIP_CODEC, str(path),
         ])
-    frames, rate = wav_info(path)
+    frames, rate = clip_info(path)
     if rate != sample_rate:  # the cache dir is per sample rate, but be safe
         path.unlink()
         return silence_clip(ms, sample_rate, cache_dir)

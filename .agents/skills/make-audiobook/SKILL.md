@@ -24,11 +24,12 @@ nix develop path:<skill> -c audiobook-synth BOOK_DIR   # Nix: locked env incl. f
 nix run path:<skill>#synth -- BOOK_DIR                 # Nix, one-off
 ```
 
-Four commands: `audiobook-stats`, `audiobook-synth`, `audiobook-build`,
-`audiobook-serve`. Prefer the uv form; use the Nix forms when uv or ffmpeg is
+Six commands: `audiobook-stats`, `audiobook-synth`, `audiobook-build` and
+`audiobook-serve` run the pipeline; `audiobook-clean` and `audiobook-cache`
+keep a book tidy. Prefer the uv form; use the Nix forms when uv or ffmpeg is
 missing (NixOS). The `path:` prefix matters when the directory is not tracked
-by git. Synthesis and site building need **ffmpeg** on PATH, which the Nix
-forms provide. The rest of this file writes the commands bare
+by git. Synthesis needs **ffmpeg** on PATH, which the Nix forms provide; the
+other commands do not. The rest of this file writes the commands bare
 (`audiobook-synth BOOK_DIR …`); one of the prefixes above is always implied.
 
 Nothing here hardcodes depth, length, or language — those are agreed with the
@@ -129,9 +130,9 @@ before the full run; report the estimated cost when asking.
 Output: `audio/<chapter>.mp3` (or `.opus` / `.m4a` via `tts.format`) and
 `audio/<chapter>.json` (segment timings). Chapters are loudness-normalized to
 -16 LUFS by default so different voices and providers sit at the same level.
-Per-paragraph results are cached in `.cache/tts/`, keyed by provider, voice,
-speed and text, so a re-run after editing one paragraph synthesizes only that
-paragraph.
+Per-paragraph results are cached in `.cache/tts/` as lossless FLAC, keyed by
+provider, voice, speed and text, so a re-run after editing one paragraph
+synthesizes only that paragraph.
 
 ## Phase 4 — Build and serve the player
 
@@ -167,6 +168,30 @@ paragraphs are re-synthesized, but the chapter MP3 is re-assembled) →
 invalidates the cache for the affected chapters by design; warn the user
 before switching voice on a finished book.
 
+`audiobook-build` warns when a chapter's audio was rendered from an older
+transcript; re-run `audiobook-synth` for it.
+
+## Housekeeping
+
+```bash
+audiobook-clean BOOK_DIR [--dry-run]     # remove files in audio/ no chapter uses
+audiobook-cache BOOK_DIR                 # cache size, referenced vs not
+audiobook-cache BOOK_DIR gc [--yes]      # prune long-unused, unreferenced clips
+```
+
+- **`site/`** is replaced wholesale by every build, so a renamed or removed
+  chapter disappears from the player by itself.
+- **`audio/`** keeps files no chapter uses after a chapter is renamed or
+  removed, after `tts.format` changes, and after a preview; synth and build
+  point them out. `audiobook-clean` removes them; commit the deletions
+  afterwards. Any of them can be re-rendered from the cache for free.
+- **`.cache/tts/`** holds every clip ever synthesized, including ones the
+  transcript no longer uses, so reverting a paragraph costs nothing.
+  `audiobook-cache gc` lists clips that neither the transcript nor the
+  manifests in `audio/` reference *and* that have gone unused for 180 days
+  (`--older-than DAYS`); `--yes` deletes them. Run it only when the user asks
+  for disk space back.
+
 ## Files
 
 - `references/writing-guide.md` — writing for the ear: depth contract,
@@ -180,8 +205,9 @@ before switching voice on a finished book.
   style prompts, costs, gotchas.
 - `assets/outline-template.md` — skeleton for `outline.md`.
 - `assets/site/` — the web player (copied into each book's `site/`).
-- `src/audiobook_lib/` — the package: `cli/` (the four commands) plus the
-  shared library (segmenter, providers, cache, ffmpeg assembly).
+- `src/audiobook_lib/` — the package: `cli/` (one module per command) plus
+  the shared library (segmenter, providers, cache, ffmpeg assembly,
+  housekeeping).
 - `tests/` — pytest suite (`nix develop path:<skill> -c pytest`, or
   `uv run --project <skill> --group dev pytest <skill>/tests`).
 - `pyproject.toml` / `uv.lock` — dependencies and the console scripts.

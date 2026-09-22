@@ -2,7 +2,7 @@
 
 `audiobook-synth` talks to several providers through one interface; the
 provider is chosen in `book.yaml: tts.provider` (or `--provider`). Whatever a
-provider returns is normalized by ffmpeg into one canonical WAV per clip on the
+provider returns is normalized by ffmpeg into one canonical FLAC per clip on the
 way into the cache, so every provider gets paragraph-level sync for free; a few
 also return word timing, which the page uses for word-level highlighting when
 present.

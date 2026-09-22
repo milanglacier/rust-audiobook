@@ -3,7 +3,7 @@
 Keyed by everything that can change the clip, so editing one paragraph
 re-synthesizes exactly that paragraph and nothing else. The cache is also the
 single normalization point: whatever a provider returns is passed through
-ffmpeg once on the way in and stored as canonical WAV (mono, 16-bit, the
+ffmpeg once on the way in and stored as canonical FLAC (mono, 16-bit, the
 configured sample rate), so assembly only ever sees identical formats.
 
 Chapter-level settings (`format`, `loudnorm`, `bitrate_kbps`) are deliberately
@@ -38,24 +38,41 @@ def cache_key(cfg: dict[str, Any], text: str) -> str:
 
 
 class Cache:
+    """`<key>.flac` (+ `<key>.words.json` when the provider returned word timings).
+
+    Nothing here ever deletes a clip on its own: every entry was paid for, and
+    a reverted paragraph should come back for free. `audiobook-cache gc` is the
+    only way out, and it keys off the mtime that `load` refreshes on each hit.
+    """
+
     def __init__(self, root: str | Path):
         self.root = Path(root)
 
     def path(self, key: str) -> Path:
-        return self.root / f"{key}.wav"
+        return self.root / f"{key}{A.CLIP_EXT}"
 
     def _words_path(self, key: str) -> Path:
         return self.root / f"{key}.words.json"
 
     def load(self, key: str) -> A.Clip | None:
-        wav = self.path(key)
-        if not wav.exists():
+        path = self.path(key)
+        if not path.exists():
             return None
         try:
-            frames, rate = A.wav_info(wav)
+            frames, rate = A.clip_info(path)
         except Exception:
             return None
-        return A.Clip(path=wav, frames=frames, sample_rate=rate, words=self._words(key))
+        self.touch(key)
+        return A.Clip(path=path, frames=frames, sample_rate=rate, words=self._words(key))
+
+    def touch(self, key: str) -> None:
+        """Mark as used now. Done by hand: atime is unreliable under
+        noatime/relatime mounts, and gc needs a real "last used"."""
+        for path in (self.path(key), self._words_path(key)):
+            try:
+                os.utime(path)
+            except FileNotFoundError:
+                pass
 
     def _words(self, key: str) -> list[tuple[float, float, str]] | None:
         wpath = self._words_path(key)
@@ -67,12 +84,12 @@ class Cache:
             return None
 
     def store(self, key: str, result: SynthResult, sample_rate: int) -> A.Clip:
-        """Normalize through ffmpeg and land the WAV atomically."""
+        """Normalize through ffmpeg and land the FLAC atomically."""
         self.root.mkdir(parents=True, exist_ok=True)
         final = self.path(key)
-        tmp = self.root / f".{key}.part.wav"
+        tmp = self.root / f".{key}.part{A.CLIP_EXT}"
         try:
-            clip = A.normalize_to_wav(
+            clip = A.normalize_clip(
                 result.data, result.format, tmp,
                 sample_rate=sample_rate, src_rate=result.sample_rate,
             )
@@ -87,3 +104,21 @@ class Cache:
                 encoding="utf-8",
             )
         return clip
+
+    def entries(self) -> dict[str, list[Path]]:
+        """Every key on disk with all of its files (clip, legacy clip, words)."""
+        out: dict[str, list[Path]] = {}
+        if not self.root.is_dir():
+            return out
+        for path in self.root.iterdir():
+            if path.name.startswith(".") or not path.is_file():
+                continue
+            key = path.name.split(".", 1)[0]
+            out.setdefault(key, []).append(path)
+        return out
+
+    def leftovers(self) -> list[Path]:
+        """Half-written `.<key>.part.*` files from an interrupted run."""
+        if not self.root.is_dir():
+            return []
+        return [p for p in self.root.glob(".*.part.*") if p.is_file()]

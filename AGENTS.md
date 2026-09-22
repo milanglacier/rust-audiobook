@@ -12,7 +12,7 @@
 ## Running audiobook commands
 
 - The audiobook skill lives in `.agents/skills/make-audiobook`, with `.claude/skills/make-audiobook` as a symlink to it. Either path works for `--project`.
-- The commands (`audiobook-synth`, `audiobook-build`, `audiobook-serve`, `audiobook-stats`) are run with `uv run --project .claude/skills/make-audiobook <command>` (or `.agents/skills/make-audiobook`).
+- The commands (`audiobook-synth`, `audiobook-build`, `audiobook-serve`, `audiobook-stats`, `audiobook-clean`, `audiobook-cache`) are run with `uv run --project .claude/skills/make-audiobook <command>` (or `.agents/skills/make-audiobook`).
 - `audiobook-synth` requires `ffmpeg`. On Nix systems (NixOS or any machine with Nix installed), wrap the command with `nix-shell -p ffmpeg --run "..."` to provide ffmpeg on the fly. On non-Nix systems, install ffmpeg yourself (e.g. `apt install ffmpeg`, `brew install ffmpeg`) so it is on PATH. Example:
   ```bash
   export $(grep -v '^#' .env | xargs)
@@ -21,7 +21,7 @@
   # Non-Nix (ffmpeg already on PATH):
   uv run --project .claude/skills/make-audiobook audiobook-synth rust-audiobook
   ```
-- `audiobook-build`, `audiobook-serve` and `audiobook-stats` do **not** need ffmpeg — `uv run` alone is fine.
+- `audiobook-build`, `audiobook-serve`, `audiobook-stats`, `audiobook-clean` and `audiobook-cache` do **not** need ffmpeg — `uv run` alone is fine.
   `build_site.py` imports `audiobook_lib.audio` only for the `AUDIO_EXTS` constant; the ffmpeg
   lookup is lazy, inside the encode helpers. This is what lets Vercel build the site (see below).
 - `--list-voices` also does not need ffmpeg.
@@ -48,7 +48,9 @@ uv run --project .claude/skills/make-audiobook audiobook-serve rust-audiobook/si
 ## Version control
 
 - `.env` is gitignored (contains API keys).
-- `.cache/tts/` is gitignored (local paragraph-level TTS cache, keyed by voice+text).
+- `.cache/tts/` is gitignored (local paragraph-level FLAC cache, keyed by voice+text). It is what
+  makes reverting a paragraph free: never delete it by hand, and run `audiobook-cache gc` only when
+  asked.
 - `audio/` is tracked — synthesis costs money, so the mp3s and their timing JSON are the one
   thing that must never be lost.
 - `site/` is **not** tracked (gitignored): it is pure build output, regenerated from `audio/` +

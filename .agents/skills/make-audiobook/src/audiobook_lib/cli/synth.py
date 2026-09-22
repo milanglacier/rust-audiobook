@@ -12,12 +12,16 @@
     audiobook-synth BOOK_DIR --list-voices
 
 Needs ffmpeg and ffprobe on PATH (or `$FFMPEG` / `$FFPROBE`): every clip is
-normalized to canonical WAV as it enters the cache and each chapter is one
+normalized to canonical FLAC as it enters the cache and each chapter is one
 concat-demuxer call. `nix develop path:<skill-dir>` provides both.
 
 Two levels of skipping: a chapter whose source_hash is unchanged is not touched
 at all, and inside a chapter every segment is looked up in <book>/.cache/tts
 first — so editing one paragraph costs one paragraph.
+
+Nothing is ever deleted here: a renamed chapter leaves its old audio behind
+(`audiobook-clean` reviews it) and replaced clips stay in the cache
+(`audiobook-cache gc` prunes it).
 """
 
 from __future__ import annotations
@@ -35,6 +39,7 @@ from typing import Any
 from audiobook_lib import audio as A
 from audiobook_lib.book import Book, Chapter, effective_tts, load_book, pause_for
 from audiobook_lib.cache import Cache, cache_key
+from audiobook_lib.housekeeping import orphan_hint, plan_chunks
 from audiobook_lib.segmenter import Segment, chunk_text, estimate_seconds
 from audiobook_lib.tts import KNOWN, TTSError, get_provider, price_per_1m
 from audiobook_lib.tts.base import Provider, SynthResult
@@ -55,11 +60,6 @@ def source_hash(cfg: dict[str, Any], spoken: list[str]) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
-def plan_chunks(segments: list[Segment], limit: int) -> list[list[str]]:
-    """Per segment, the list of request-sized pieces of its spoken text."""
-    return [chunk_text(s.spoken, limit) if s.spoken else [] for s in segments]
-
-
 # --------------------------------------------------------------------------
 
 
@@ -68,7 +68,7 @@ def synth_texts(
 ) -> tuple[dict[str, A.Clip], int, int]:
     """Synthesize the distinct texts, cache-first. Returns (by_text, n_cached, chars_sent).
 
-    Every result is normalized to canonical WAV by `Cache.store`, so the
+    Every result is normalized to canonical FLAC by `Cache.store`, so the
     returned clips all share the configured rate, channel count and format.
     """
     out: dict[str, A.Clip] = {}
@@ -425,6 +425,8 @@ def main() -> int:
             return 1
         total_chars += int(sent or 0)
     print(f"done in {time.time() - t0:.1f}s; {total_chars} characters sent to the provider")
+    if hint := orphan_hint(book):
+        print(hint)
     return 0
 
 

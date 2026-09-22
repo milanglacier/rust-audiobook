@@ -27,7 +27,7 @@ spelling. The surrounding prose must already have said everything that matters.
 │   └── 02-<slug>.md
 ├── audio/               # produced by audiobook-synth: <chapter>.mp3|opus + .json
 ├── site/                # produced by audiobook-build; serve this directory
-└── .cache/tts/          # per-segment audio cache keyed by content hash
+└── .cache/tts/          # per-segment FLAC cache keyed by content hash
 ```
 
 Chapter files are picked up by sorting `chapters/*.md`. Use a two-digit prefix

@@ -178,3 +178,101 @@ def test_default_assets_point_at_the_real_player():
     # either the repo checkout or the copy force-included in the wheel
     assert assets.name == "site" and assets.parent.name in ("assets",)
     assert build_site.REPO_ASSETS == SKILL_ROOT / "assets" / "site"
+
+
+# -- housekeeping: stale site, orphaned audio, cache gc ----------------------
+
+from audiobook_lib.book import load_book  # noqa: E402
+from audiobook_lib.cli import cache as cache_cli, clean  # noqa: E402
+from audiobook_lib.housekeeping import referenced_keys  # noqa: E402
+
+def rename_chapter(book_dir: Path, old: str, new: str) -> None:
+    (book_dir / "chapters" / f"{old}.md").rename(book_dir / "chapters" / f"{new}.md")
+
+
+def edit_chapter_two(book_dir: Path) -> None:
+    path = book_dir / "chapters" / "02-reverse.md"
+    path.write_text(path.read_text("utf-8").replace("讲完收工", "讲完，下课"), encoding="utf-8")
+
+
+@needs_ffmpeg
+def test_cache_clips_are_flac(monkeypatch, book_dir):
+    assert run(monkeypatch, synth.main, str(book_dir)) == 0
+    clips = list((book_dir / ".cache" / "tts").glob("*.flac"))
+    assert clips and not list((book_dir / ".cache" / "tts").glob("*.wav"))
+    assert all(p.read_bytes()[:4] == b"fLaC" for p in clips)
+
+
+@needs_ffmpeg
+def test_build_drops_audio_of_a_renamed_chapter(monkeypatch, book_dir, capsys):
+    assert run(monkeypatch, synth.main, str(book_dir)) == 0
+    assert run(monkeypatch, build_site.main, str(book_dir)) == 0
+    rename_chapter(book_dir, "02-reverse", "02-backwards")
+    assert run(monkeypatch, build_site.main, str(book_dir)) == 0
+    site = book_dir / "site"
+    assert not (site / "audio" / "02-reverse.mp3").exists()
+    assert not (site / "chapters" / "02-reverse.json").exists()
+    assert (site / ".audiobook-site").is_file()
+    assert not list(book_dir.glob(".site.*"))  # staging and old copy are gone
+    assert "belong to no chapter" in capsys.readouterr().out
+
+
+def test_build_refuses_to_replace_a_foreign_directory(monkeypatch, book_dir, tmp_path):
+    foreign = tmp_path / "precious"
+    foreign.mkdir()
+    (foreign / "notes.txt").write_text("keep me")
+    with pytest.raises(SystemExit):
+        run(monkeypatch, build_site.main, str(book_dir), "--out", str(foreign))
+    assert (foreign / "notes.txt").read_text() == "keep me"
+
+
+@needs_ffmpeg
+def test_build_flags_an_edited_but_unsynthesized_chapter(monkeypatch, book_dir, capsys):
+    assert run(monkeypatch, synth.main, str(book_dir)) == 0
+    edit_chapter_two(book_dir)
+    capsys.readouterr()
+    assert run(monkeypatch, build_site.main, str(book_dir)) == 0
+    out = capsys.readouterr().out
+    assert "02-reverse" in out and "different transcript" in out
+    assert "01-forward" not in out
+
+
+@needs_ffmpeg
+def test_clean_removes_orphans_and_nothing_else(monkeypatch, book_dir, capsys):
+    assert run(monkeypatch, synth.main, str(book_dir)) == 0
+    rename_chapter(book_dir, "02-reverse", "02-backwards")
+    audio = book_dir / "audio"
+
+    assert run(monkeypatch, clean.main, str(book_dir), "--dry-run") == 0
+    assert (audio / "02-reverse.mp3").exists()
+    assert "02-reverse.mp3" in capsys.readouterr().out
+
+    assert run(monkeypatch, clean.main, str(book_dir)) == 0
+    assert not (audio / "02-reverse.mp3").exists()
+    assert not (audio / "02-reverse.json").exists()
+    assert (audio / "01-forward.mp3").exists() and (audio / "01-forward.json").exists()
+
+
+@needs_ffmpeg
+def test_gc_removes_only_old_unreferenced_clips(monkeypatch, book_dir):
+    assert run(monkeypatch, synth.main, str(book_dir)) == 0
+    cache_dir = book_dir / ".cache" / "tts"
+    before = {p.stem for p in cache_dir.glob("*.flac")}
+    edit_chapter_two(book_dir)
+    assert run(monkeypatch, synth.main, str(book_dir)) == 0
+    added = {p.stem for p in cache_dir.glob("*.flac")} - before
+    assert len(added) == 1
+
+    book = load_book(book_dir)
+    referenced = referenced_keys(book)
+    dropped = before - referenced
+    assert len(dropped) == 1  # only the edited paragraph's old clip
+
+    # recent: the age threshold protects it
+    assert run(monkeypatch, cache_cli.main, str(book_dir), "gc", "--yes") == 0
+    assert {p.stem for p in cache_dir.glob("*.flac")} >= dropped
+
+    assert run(monkeypatch, cache_cli.main, str(book_dir), "gc", "--older-than", "0", "--yes") == 0
+    left = {p.stem for p in cache_dir.glob("*.flac")}
+    assert not (left & dropped)
+    assert referenced <= left

@@ -154,8 +154,8 @@ def test_ffmpeg_reads_back_a_quoted_path(tmp_path):
 @needs_ffmpeg
 def test_pcm_is_normalized_into_the_cache(tmp_path):
     mock = get_provider("mock").synthesize("一二三四五", CFG)
-    clip = A.normalize_to_wav(
-        mock.data, mock.format, tmp_path / "raw.wav", 24000, mock.sample_rate
+    clip = A.normalize_clip(
+        mock.data, mock.format, tmp_path / "raw.flac", 24000, mock.sample_rate
     )
     assert (clip.frames, clip.sample_rate) == (len(mock.data) // 2, 24000)
 
@@ -163,16 +163,16 @@ def test_pcm_is_normalized_into_the_cache(tmp_path):
 @needs_ffmpeg
 def test_mp3_round_trip_keeps_rate_and_length(tmp_path):
     mock = get_provider("mock").synthesize("一二三四五", CFG)
-    raw = A.normalize_to_wav(
-        mock.data, mock.format, tmp_path / "raw.wav", 24000, mock.sample_rate
+    raw = A.normalize_clip(
+        mock.data, mock.format, tmp_path / "raw.flac", 24000, mock.sample_rate
     )
     A.encode_concat(
         A.write_concat_list(tmp_path / "l2.txt", [raw.path]),
         tmp_path / "clip.mp3",
         sample_rate=24000, fmt="mp3", bitrate_kbps=96, loudnorm=False,
     )
-    back = A.normalize_to_wav(
-        (tmp_path / "clip.mp3").read_bytes(), "mp3", tmp_path / "back.wav", 24000
+    back = A.normalize_clip(
+        (tmp_path / "clip.mp3").read_bytes(), "mp3", tmp_path / "back.flac", 24000
     )
     assert back.sample_rate == 24000
     assert abs(back.duration - raw.duration) < 0.06
@@ -186,7 +186,7 @@ def test_low_rate_wav_is_resampled(tmp_path):
         w.setsampwidth(2)
         w.setframerate(16000)
         w.writeframes(b"\x00\x00" * 16000)
-    up = A.normalize_to_wav(wav16.read_bytes(), "wav", tmp_path / "up.wav", 24000)
+    up = A.normalize_clip(wav16.read_bytes(), "wav", tmp_path / "up.flac", 24000)
     assert (up.frames, up.sample_rate) == (24000, 24000)
 
 

@@ -34,7 +34,7 @@
         (pkgs.callPackage pyproject-nix.build.packages { python = pkgs.python3; }).overrideScope
           (lib.composeManyExtensions [ pyproject-build-systems.overlays.default lockOverlay ]);
 
-      commands = [ "stats" "synth" "build" "serve" ];
+      commands = [ "stats" "synth" "build" "serve" "clean" "cache" ];
     in {
       packages = forAll (pkgs:
         let

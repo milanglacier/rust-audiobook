@@ -18,7 +18,7 @@ class SynthResult:
 
     `format` is `"pcm_s16le"` — headerless samples, `sample_rate` required — or
     a container/codec name (`"wav"`, `"mp3"`, `"ogg"`, …) whose bytes carry
-    their own header. The cache normalizes every result to canonical WAV on
+    their own header. The cache normalizes every result to canonical FLAC on
     the way in, so a provider may return the format its API does best; ask for
     PCM or WAV where the API offers it, to avoid a lossy round trip.
     """

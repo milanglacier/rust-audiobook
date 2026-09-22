@@ -5,6 +5,11 @@
 Works before a single second of audio exists: a chapter with no manifest is
 written in transcript-only mode (null start/end, null audio) so the whole book
 can be reviewed in the player before any money is spent.
+
+The output directory is rebuilt from scratch every time — staged next to it,
+then swapped in — so a renamed chapter or a format switch leaves nothing stale
+behind. Audio is hardlinked, so a rebuild costs next to nothing. A directory
+that does not look like an earlier build is never replaced.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ from typing import Any
 
 from audiobook_lib import audio as A
 from audiobook_lib.book import Book, Chapter, load_book
+from audiobook_lib.housekeeping import orphan_hint, stale_chapters
 
 # The repo checkout, for an editable install or a `uv run --project` run.
 SKILL_DIR = Path(__file__).resolve().parents[3]
@@ -67,8 +73,51 @@ real output and the player can be dropped in later.</p>
 """
 
 
-def _mtime(path: Path) -> float:
-    return path.stat().st_mtime if path.exists() else 0.0
+# dropped into every build, so the next build knows the directory is its to replace
+MARKER = ".audiobook-site"
+
+
+def is_built_site(path: Path) -> bool:
+    """Ours to replace: marked, or shaped like our output (book.json + chapters/)."""
+    if (path / MARKER).is_file():
+        return True
+    return (path / "book.json").is_file() and (path / "chapters").is_dir()
+
+
+def check_out_dir(out: Path) -> None:
+    if not out.exists():
+        return
+    if not out.is_dir():
+        raise SystemExit(f"{out} exists and is not a directory")
+    if any(out.iterdir()) and not is_built_site(out):
+        raise SystemExit(
+            f"{out} is not empty and was not built by audiobook-build (no {MARKER}); "
+            "refusing to replace it — pass a new or empty --out"
+        )
+
+
+def swap_in(stage: Path, out: Path) -> None:
+    """Replace `out` with `stage`: two renames, so a running audiobook-serve
+    (which resolves every request against the path) sees the old site or the
+    new one, never half of each."""
+    old = out.parent / f".{out.name}.old"
+    shutil.rmtree(old, ignore_errors=True)
+    try:
+        if out.exists():
+            os.replace(out, old)
+        os.replace(stage, out)
+    except OSError:
+        # `out` cannot be renamed (a mount point, say): empty it and move in
+        out.mkdir(parents=True, exist_ok=True)
+        for item in out.iterdir():
+            if item.is_dir() and not item.is_symlink():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
+        for item in stage.iterdir():
+            os.replace(item, out / item.name)
+        stage.rmdir()
+    shutil.rmtree(old, ignore_errors=True)
 
 
 def copy_assets(assets: Path, out: Path) -> bool:
@@ -180,10 +229,13 @@ def main() -> int:
     args = ap.parse_args()
 
     book = load_book(args.book_dir)
-    out = Path(args.out).expanduser().resolve() if args.out else book.dir / "site"
+    final = Path(args.out).expanduser().resolve() if args.out else book.dir / "site"
     assets = Path(args.site_assets).expanduser().resolve() if args.site_assets else DEFAULT_ASSETS
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "chapters").mkdir(exist_ok=True)
+    check_out_dir(final)
+    out = final.parent / f".{final.name}.building"
+    shutil.rmtree(out, ignore_errors=True)
+    (out / "chapters").mkdir(parents=True)
+    (out / MARKER).write_text("built by audiobook-build; replaced wholesale on every build\n")
 
     have_assets = copy_assets(assets, out)
     if have_assets:
@@ -193,13 +245,10 @@ def main() -> int:
         print(f"notice: no player assets in {assets} — writing a placeholder index.html")
 
     chapters_meta: list[dict[str, Any]] = []
-    stale: list[str] = []
     for ch in book.chapters:
         manifest_src = book.audio_dir / f"{ch.id}.json"
         if manifest_src.exists():
             manifest = json.loads(manifest_src.read_text("utf-8"))
-            if _mtime(manifest_src) < _mtime(ch.path):
-                stale.append(ch.id)
         else:
             manifest = transcript_manifest(book, ch)
 
@@ -256,13 +305,20 @@ def main() -> int:
             encoding="utf-8",
         )
 
+    swap_in(out, final)
+
     with_audio = sum(1 for c in chapters_meta if c["audio"])
     print(
-        f"built {out}: {len(chapters_meta)} chapters, {with_audio} with audio, "
+        f"built {final}: {len(chapters_meta)} chapters, {with_audio} with audio, "
         f"{len(chapters_meta) - with_audio} transcript-only"
     )
-    for cid in stale:
-        print(f"  warning: {cid}: audio/{cid}.json is older than chapters/{cid}.md — re-run audiobook-synth")
+    for cid in stale_chapters(book):
+        print(
+            f"  warning: {cid}: audio/{cid}.json was rendered from a different transcript "
+            f"than chapters/{cid}.md — re-run audiobook-synth"
+        )
+    if hint := orphan_hint(book):
+        print(hint)
     return 0
 
 
