@@ -1,14 +1,11 @@
-# CLI deploys (`vercel deploy`) are NOT supported: rust-audiobook/site is no longer
-# tracked, and the buildCommand's inputs (chapters/, audio/, book.yaml) are excluded
-# below, so a CLI deploy fails fast rather than uploading 90 MB of mp3.
-# Deploy from Git — Git deploys clone the whole repo and ignore this file.
-.agents/
-.claude/
+# This applies to Git deploys too, not just `vercel deploy`. Anything listed here is
+# absent from the build context, so the buildCommand's inputs must NOT be listed:
+# .agents/ (the skill), scripts/, and rust-audiobook/{book.yaml,chapters/,audio/}.
 .env
+.vercel/
+.claude/
 AGENTS.md
 CLAUDE.md
+README.md
 rust-audiobook/.cache/
-rust-audiobook/chapters/
-rust-audiobook/audio/
 rust-audiobook/outline.md
-rust-audiobook/book.yaml
