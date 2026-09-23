@@ -160,6 +160,14 @@ highlighted and kept in view, tap-to-seek, a sticky bar with play/pause,
 ±15/30 s, speed, sleep timer and autoplay-next; position is remembered and
 lock-screen controls work through the Media Session API.
 
+## Deploying to Vercel
+
+To put the player on the web, use a Git-based Vercel deploy: commit
+`chapters/`, `audio/` and `book.yaml`, keep `site/` out of git, and let
+Vercel run `audiobook-build` on every push. Read
+`references/deploy-vercel.md` before setting it up or when a deploy fails;
+it has the three config files to copy and the pitfalls that break the build.
+
 ## Iterating
 
 Edit chapter Markdown → `audiobook-stats` → `audiobook-synth` (only changed
@@ -203,6 +211,8 @@ audiobook-cache BOOK_DIR gc [--yes]      # prune long-unused, unreferenced clips
   schema, segment model, and the manifest the commands exchange.
 - `references/tts-providers.md` — provider comparison, env vars, voices,
   style prompts, costs, gotchas.
+- `references/deploy-vercel.md` — Git-based Vercel deploy: what to commit,
+  build script, `vercel.json`, `.vercelignore`, pitfalls.
 - `assets/outline-template.md` — skeleton for `outline.md`.
 - `assets/site/` — the web player (copied into each book's `site/`).
 - `src/audiobook_lib/` — the package: `cli/` (one module per command) plus
