@@ -1,5 +1,8 @@
 # Deploying the player to Vercel
 
+To put the player on the web, use a Git-based Vercel deploy: commit
+`chapters/`, `audio/` and `book.yaml`, keep `site/` out of git.
+
 The player is a static site, so any static host works. This file covers
 Vercel with Git-based deploys: the repository holds the transcript and the
 audio, and Vercel runs `audiobook-build` on every push to regenerate `site/`.

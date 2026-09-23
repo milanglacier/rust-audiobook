@@ -160,14 +160,6 @@ highlighted and kept in view, tap-to-seek, a sticky bar with play/pause,
 ±15/30 s, speed, sleep timer and autoplay-next; position is remembered and
 lock-screen controls work through the Media Session API.
 
-## Deploying to Vercel
-
-To put the player on the web, use a Git-based Vercel deploy: commit
-`chapters/`, `audio/` and `book.yaml`, keep `site/` out of git, and let
-Vercel run `audiobook-build` on every push. Read
-`references/deploy-vercel.md` before setting it up or when a deploy fails;
-it has the three config files to copy and the pitfalls that break the build.
-
 ## Iterating
 
 Edit chapter Markdown → `audiobook-stats` → `audiobook-synth` (only changed
