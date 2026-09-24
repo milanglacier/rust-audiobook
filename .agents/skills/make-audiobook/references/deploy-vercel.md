@@ -108,12 +108,8 @@ exec uv run --python 3.12 --project SKILL_DIR audiobook-build BOOK_DIR
 }
 ```
 
-Browsers may keep audio for a year without checking back, because an audio
-URL never points at different bytes. `audiobook-build` adds a hash of the
-file's contents to each audio URL (`audio/03.mp3?v=3f9a2c1b0d4e`), so a
-re-synthesized chapter gets a new URL and every listener fetches the new
-recording. `book.json`, the chapter JSON files and the player code carry those
-URLs, so they are revalidated on every load.
+Audio can be cached for a year because `audiobook-build` adds a hash of each
+file's contents to its URL, so a re-synthesized chapter gets a new URL.
 
 ### `.vercelignore`
 
