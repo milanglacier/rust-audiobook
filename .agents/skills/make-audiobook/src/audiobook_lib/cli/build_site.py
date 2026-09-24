@@ -15,6 +15,7 @@ that does not look like an earlier build is never replaced.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 import os
@@ -203,6 +204,18 @@ def link_or_copy(src: Path, dest: Path) -> None:
         shutil.copy2(src, dest)
 
 
+def audio_version(path: Path) -> str:
+    """A short hash of the file's bytes, added to its URL as `?v=`.
+
+    A re-synthesized chapter keeps its file name, so the hash is what gives
+    new audio a new URL. That lets the host tell browsers to cache audio
+    forever: a returning listener never plays an old recording against new
+    timings.
+    """
+    with path.open("rb") as f:
+        return hashlib.file_digest(f, "sha256").hexdigest()[:12]
+
+
 def transcript_manifest(book: Book, ch: Chapter) -> dict[str, Any]:
     """A manifest with no timing, for chapters that have not been synthesized."""
     segments = []
@@ -258,7 +271,7 @@ def main() -> int:
         if named:
             src = book.audio_dir / Path(named).name
             if src.exists() and src.suffix.lower() in A.AUDIO_EXTS:
-                audio_rel = f"audio/{src.name}"
+                audio_rel = f"audio/{src.name}?v={audio_version(src)}"
                 link_or_copy(src, out / "audio" / src.name)
         manifest["audio"] = audio_rel
 
@@ -291,7 +304,7 @@ def main() -> int:
         items = "\n".join(
             f'  <li><a href="{c["manifest"]}">{c["id"]}</a> — {c["title"]}'
             + (
-                f' (<a href="{c["audio"]}">{Path(c["audio"]).suffix.lstrip(".")}</a>)'
+                f' (<a href="{c["audio"]}">{Path(c["audio"].partition("?")[0]).suffix.lstrip(".")}</a>)'
                 if c["audio"] else " — no audio yet"
             )
             + "</li>"

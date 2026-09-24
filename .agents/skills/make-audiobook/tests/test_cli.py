@@ -125,7 +125,10 @@ def test_build_site_produces_the_real_player(monkeypatch, book_dir):
     book_json = json.loads((site / "book.json").read_text("utf-8"))
     assert [c["id"] for c in book_json["chapters"]] == ["01-forward", "02-reverse"]
     assert all(c["audio"] for c in book_json["chapters"])
-    assert all((site / c["audio"]).is_file() for c in book_json["chapters"])
+    for c in book_json["chapters"]:
+        path, _, version = c["audio"].partition("?v=")
+        assert (site / path).is_file()
+        assert version == build_site.audio_version(site / path)
     assert all((site / c["manifest"]).is_file() for c in book_json["chapters"])
     index = (site / "index.html").read_text("utf-8")
     assert "app.js" in index  # the real player, not the placeholder
